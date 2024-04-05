@@ -5,7 +5,7 @@ The merkle tree functions are located in sparse.ak.
 Currently the supported functionality is:
 - Verifying a new root with an added member.
 - Verifying a new root with a removed member.
-- Verifying a member is include in the tree.
+- Verifying a member is included in the tree.
 - Verifying a member is not included in the tree. 
 
 ## Building
@@ -19,6 +19,12 @@ aiken build
 Tests are located in sparse_test.ak
 
 
+
+## Offchain code
+Since the onchain code requires a very specific implementation of the sparse merkle tree,
+I have added an implementation of the offchain code in rust. 
+This implementation was forked from https://github.com/nervosnetwork/sparse-merkle-tree/tree/master
+and then modified to work with the on chain code.
 
 
 ## Documentation

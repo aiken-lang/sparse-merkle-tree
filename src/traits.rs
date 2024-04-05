@@ -1,0 +1,40 @@
+use crate::{
+    error::Error,
+    h256::H256,
+    tree::{BranchKey, BranchNode},
+};
+
+/// Trait for customize hash function
+pub trait Hasher {
+    fn write_h256(&mut self, h: &H256);
+    fn write_byte(&mut self, b: u8);
+    fn finish(self) -> H256;
+}
+
+/// Trait for define value structures
+pub trait Value {
+    fn to_h256(&self) -> H256;
+    fn zero() -> Self;
+}
+
+impl Value for H256 {
+    fn to_h256(&self) -> H256 {
+        *self
+    }
+    fn zero() -> Self {
+        H256::zero()
+    }
+}
+
+/// Traits for customize backend storage
+pub trait StoreReadOps<V> {
+    fn get_branch(&self, branch_key: &BranchKey) -> Result<Option<BranchNode>, Error>;
+    fn get_leaf(&self, leaf_key: &H256) -> Result<Option<V>, Error>;
+}
+
+pub trait StoreWriteOps<V> {
+    fn insert_branch(&mut self, node_key: BranchKey, branch: BranchNode) -> Result<(), Error>;
+    fn insert_leaf(&mut self, leaf_key: H256, leaf: V) -> Result<(), Error>;
+    fn remove_branch(&mut self, node_key: &BranchKey) -> Result<(), Error>;
+    fn remove_leaf(&mut self, leaf_key: &H256) -> Result<(), Error>;
+}
