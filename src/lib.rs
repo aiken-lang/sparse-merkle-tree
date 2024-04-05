@@ -1,7 +1,13 @@
+pub mod blake2b;
+pub mod default_store;
 pub mod error;
 pub mod h256;
 pub mod merge;
 pub mod merkle_proof;
+
+#[cfg(test)]
+mod tests;
+
 pub mod traits;
 pub mod tree;
 
