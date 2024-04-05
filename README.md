@@ -1,16 +1,11 @@
 # sparse-merkle-tree
 
-Write validators in the `validators` folder, and supporting functions in the `lib` folder using `.ak` as a file extension.
+The merkle tree functions are located in sparse.ak. Currently the supported functionality is:
 
-For example, as `validators/always_true.ak`
-
-```gleam
-validator {
-  fn spend(_datum: Data, _redeemer: Data, _context: Data) -> Bool {
-    True
-  }
-}
-```
+- Verifying a new root with an added member.
+- Verifying a new root with a removed member.
+- Verifying a member is include in the tree.
+- Verifying a member is not included in the tree. 
 
 ## Building
 
@@ -20,25 +15,10 @@ aiken build
 
 ## Testing
 
-You can write tests in any module using the `test` keyword. For example:
+Tests are located in sparse_test.ak
 
-```gleam
-test foo() {
-  1 + 1 == 2
-}
-```
 
-To run all tests, simply do:
 
-```sh
-aiken check
-```
-
-To run only tests matching the string `foo`, do:
-
-```sh
-aiken check -m foo
-```
 
 ## Documentation
 

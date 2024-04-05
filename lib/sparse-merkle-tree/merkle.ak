@@ -72,6 +72,16 @@ pub fn do_verify_root(
   }
 }
 
+pub fn combine_sides(
+  hashed_left: HashedProof,
+  hashed_right: HashedProof,
+) -> ByteArray {
+  hashed_left
+    |> get_hashed_bytes
+    |> bytearray.concat(hashed_right |> get_hashed_bytes)
+    |> hash.blake2b_256
+}
+
 /// Combine the left and right proofs to get the new combined hash
 pub fn combine_proofs(
   starting_side: Side,
