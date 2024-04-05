@@ -1,7 +1,8 @@
 # sparse-merkle-tree
 
-The merkle tree functions are located in sparse.ak. Currently the supported functionality is:
+The merkle tree functions are located in sparse.ak. 
 
+Currently the supported functionality is:
 - Verifying a new root with an added member.
 - Verifying a new root with a removed member.
 - Verifying a member is include in the tree.
