@@ -5,12 +5,12 @@ use aiken/fuzz.{and_then, bytearray as byte_fuzzer, map}
 use aiken/hash
 use aiken/list
 use aiken/math
-use aiken/string
-use sparse_merkle_tree/merkle.{
+use aiken/sparse_merkle_tree/merkle.{
   Left, Right, combine_proofs, convert_bytes_to_left_proofs,
   convert_bytes_to_remainder_proofs, convert_bytes_to_right_proofs, left_proof,
   right_proof, verify_root,
 }
+use aiken/string
 
 fn list_at(l: List<a>, index: Int) -> a {
   if index == 0 {

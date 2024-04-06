@@ -1,8 +1,8 @@
 use aiken/builtin
 use aiken/bytearray
 use aiken/hash
-use sparse_merkle_tree/consts.{merkle_lower_bound, merkle_upper_bound}
-use sparse_merkle_tree/merkle.{
+use aiken/sparse_merkle_tree/consts.{merkle_lower_bound, merkle_upper_bound}
+use aiken/sparse_merkle_tree/merkle.{
   LeftMerkleProofs, MerkleRemainderProofs, RightMerkleProofs, Root, Side,
   combine_proofs, combine_sides, get_left_leaf, get_right_leaf, left_proof,
   right_proof, verify_root,
