@@ -17,7 +17,7 @@ pub fn init_root() -> Root {
 /// Verifies a new member was inserted correctly to the spare merkle tree.
 /// Returns false if the member is already in the tree.
 pub fn verify_added_member(
-  new_member: Data,
+  member_hash: ByteArray,
   starting_side: Side,
   left_proofs: LeftMerkleProofs,
   right_proofs: RightMerkleProofs,
@@ -26,8 +26,6 @@ pub fn verify_added_member(
   old_root: Root,
   new_root: Root,
 ) -> Bool {
-  let account_hash = new_member |> builtin.serialise_data |> hash.blake2b_256
-
   // Get left and right leaf to ensure the new item
   // is between 2 existing leafs in the tree
   let left_leaf = left_proofs |> get_left_leaf
@@ -48,13 +46,13 @@ pub fn verify_added_member(
       remaining_side_proofs,
       hashed_left,
       hashed_right,
-      account_hash,
+      member_hash,
     )
 
   and {
     // Check valid bounds
-    builtin.less_than_bytearray(left_leaf, account_hash),
-    builtin.less_than_bytearray(account_hash, right_leaf),
+    builtin.less_than_bytearray(left_leaf, member_hash),
+    builtin.less_than_bytearray(member_hash, right_leaf),
     builtin.less_than_equals_bytearray(merkle_lower_bound, left_leaf),
     builtin.less_than_bytearray(merkle_lower_bound, right_leaf),
     // Verify old and new roots
@@ -66,7 +64,7 @@ pub fn verify_added_member(
 /// Verifies a new member was removed correctly from the spare merkle tree.
 /// Returns false if the member was not in the tree.
 pub fn verify_deleted_member(
-  member: Data,
+  member_hash: ByteArray,
   starting_side: Side,
   left_proofs: LeftMerkleProofs,
   right_proofs: RightMerkleProofs,
@@ -75,8 +73,6 @@ pub fn verify_deleted_member(
   old_root: Root,
   new_root: Root,
 ) -> Bool {
-  let account_hash = member |> builtin.serialise_data |> hash.blake2b_256
-
   // Get left and right leaf to ensure the new item
   // is between 2 existing leafs in the tree
   let left_leaf = left_proofs |> get_left_leaf
@@ -97,13 +93,13 @@ pub fn verify_deleted_member(
       remaining_side_proofs,
       hashed_left,
       hashed_right,
-      account_hash,
+      member_hash,
     )
 
   and {
     // Check valid bounds
-    builtin.less_than_bytearray(left_leaf, account_hash),
-    builtin.less_than_bytearray(account_hash, right_leaf),
+    builtin.less_than_bytearray(left_leaf, member_hash),
+    builtin.less_than_bytearray(member_hash, right_leaf),
     builtin.less_than_equals_bytearray(merkle_lower_bound, left_leaf),
     builtin.less_than_bytearray(merkle_lower_bound, right_leaf),
     // Verify old and new roots
@@ -115,26 +111,22 @@ pub fn verify_deleted_member(
 /// Verifies a member exists in the spare merkle tree.
 /// Returns false if the member was not in the tree.
 pub fn member_in_tree(
-  member: Data,
+  member_hash: ByteArray,
   remaining_proofs: MerkleRemainderProofs,
   root: Root,
 ) -> Bool {
-  let account_hash = member |> builtin.serialise_data |> hash.blake2b_256
-
-  verify_root(remaining_proofs, account_hash, root)
+  verify_root(remaining_proofs, member_hash, root)
 }
 
 /// Verifies a member does not exist in the spare merkle tree.
 /// Returns false if the member was in the tree.
 pub fn member_not_in_tree(
-  member: Data,
+  member_hash: ByteArray,
   left_proofs: LeftMerkleProofs,
   right_proofs: RightMerkleProofs,
   remaining_proofs: MerkleRemainderProofs,
   root: Root,
 ) -> Bool {
-  let account_hash = member |> builtin.serialise_data |> hash.blake2b_256
-
   // Get left and right leaf to ensure the new item
   // is between 2 existing leafs in the tree
   let left_leaf = left_proofs |> get_left_leaf
@@ -150,8 +142,8 @@ pub fn member_not_in_tree(
 
   and {
     // Check valid bounds
-    builtin.less_than_bytearray(left_leaf, account_hash),
-    builtin.less_than_bytearray(account_hash, right_leaf),
+    builtin.less_than_bytearray(left_leaf, member_hash),
+    builtin.less_than_bytearray(member_hash, right_leaf),
     builtin.less_than_equals_bytearray(merkle_lower_bound, left_leaf),
     builtin.less_than_bytearray(merkle_lower_bound, right_leaf),
     // Verify old and new roots
