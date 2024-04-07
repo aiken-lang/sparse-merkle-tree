@@ -4,6 +4,8 @@ use aiken/hash
 
 pub const proof_length = 32
 
+pub const leaf_byte = "0d"
+
 pub type Side {
   Left
   Right
@@ -20,7 +22,7 @@ fn get_hashed_bytes(p: HashedProof) -> ByteArray {
   p.inner
 }
 
-// Plus one byte to tell us whether to prepend or append the proof
+/// Plus one byte to tell us whether to prepend or append the proof
 pub fn remainder_proofs_size() {
   proof_length + 1
 }
@@ -29,15 +31,16 @@ pub opaque type MerkleRemainderProofs {
   inner: ByteArray,
 }
 
+/// 1 byte for deciding which side the proof is on and 32 bytes for the proof hash
 pub fn convert_bytes_to_remainder_proofs(
   bytes: ByteArray,
 ) -> MerkleRemainderProofs {
-  // 1 byte for deciding which side the proof is on and 32 bytes for the proof hash
   expect bytearray.length(bytes) % remainder_proofs_size() == 0
 
   MerkleRemainderProofs { inner: bytes }
 }
 
+/// Verify the remaining merkle proof branches with the current hashed proofs equals the root
 pub fn verify_root(
   bounds: MerkleRemainderProofs,
   hashed_proof: ByteArray,
@@ -46,7 +49,7 @@ pub fn verify_root(
   do_verify_root(hashed_proof, bounds, bytearray.length(bounds.inner), 0) == root
 }
 
-pub fn do_verify_root(
+fn do_verify_root(
   hashed_proof: ByteArray,
   bounds: MerkleRemainderProofs,
   bounds_length: Int,
@@ -72,6 +75,9 @@ pub fn do_verify_root(
   }
 }
 
+/// Combine the left and right proofs to get the new combined hash
+/// Assumes remaining_side_proofs is empty and the rest of the merkle 
+/// proof is contained remaining_proofs
 pub fn combine_sides(
   hashed_left: HashedProof,
   hashed_right: HashedProof,
@@ -83,6 +89,7 @@ pub fn combine_sides(
 }
 
 /// Combine the left and right proofs to get the new combined hash
+/// Then repeat with the item to be inserted
 pub fn combine_proofs(
   starting_side: Side,
   remaining_side_proofs: ByteArray,
@@ -102,9 +109,12 @@ pub fn combine_proofs(
           |> bytearray.concat(hashed_right.inner)
           |> hash.blake2b_256
 
+      // Note we prepend a leaf byte to the account item in the proof to account for the leaf hash
       let new_combined_hash =
-        hashed_left.inner
-          |> bytearray.concat(account_hash)
+        account_hash
+          |> bytearray.concat(leaf_byte, _)
+          |> hash.blake2b_256
+          |> bytearray.concat(hashed_left.inner, _)
           |> hash.blake2b_256
           |> left_proof_with_hash(left_remaining)
           |> get_hashed_bytes
@@ -125,6 +135,7 @@ pub fn combine_proofs(
           |> bytearray.concat(hashed_left.inner, _)
           |> hash.blake2b_256
 
+      // Note we prepend a leaf byte to the account item in the proof to account for the leaf hash
       let new_combined_hash =
         hashed_right.inner
           |> bytearray.concat(account_hash, _)
@@ -149,26 +160,29 @@ pub fn convert_bytes_to_left_proofs(bytes: ByteArray) -> LeftMerkleProofs {
   LeftMerkleProofs { inner: bytes }
 }
 
-// The new item is on the right side of the tree
-// so we prepend only left side proofs
+/// The new item is on the right side of the tree
+/// so we prepend only left side proofs. 
+/// Note we prepend a leaf byte to the first item in the proof to account for the leaf hash. 
+/// Fails if left_side is empty
 pub fn left_proof(left_side: LeftMerkleProofs) -> HashedProof {
   if bytearray.length(left_side.inner) == proof_length {
-    HashedProof(left_side.inner)
+    leaf_byte
+      |> bytearray.concat(left_side.inner)
+      |> hash.blake2b_256
+      |> HashedProof
   } else {
-    HashedProof(
-      do_left_proof(
-        builtin.slice_bytearray(0, proof_length, left_side.inner),
-        left_side,
-        bytearray.length(left_side.inner),
-        proof_length,
-      ),
-    )
+    builtin.slice_bytearray(0, proof_length, left_side.inner)
+      |> bytearray.concat(leaf_byte, _)
+      |> hash.blake2b_256
+      |> do_left_proof(left_side, bytearray.length(left_side.inner), proof_length)
+      |> HashedProof
   }
 }
 
-// The new item is on the right side of the tree
-// so we prepend only left side proofs
-pub fn left_proof_with_hash(
+/// The new item is on the right side of the tree
+/// so we prepend only left side proofs
+/// This assumes the starting hash is a branch hash and not a leaf hash
+fn left_proof_with_hash(
   starting_hash: ByteArray,
   left_side: LeftMerkleProofs,
 ) -> HashedProof {
@@ -217,24 +231,33 @@ pub fn convert_bytes_to_right_proofs(bytes: ByteArray) -> RightMerkleProofs {
   RightMerkleProofs { inner: bytes }
 }
 
-// The new item is on the left side of the tree
-// so we append only left side proofs
+/// The new item is on the left side of the tree
+/// so we prepend only append right side proofs. 
+/// Note we prepend a leaf byte to the first item in the proof to account for the leaf hash. 
+/// Fails if right_side is empty
 pub fn right_proof(right_side: RightMerkleProofs) -> HashedProof {
   if bytearray.length(right_side.inner) == proof_length {
-    HashedProof(right_side.inner)
+    leaf_byte
+      |> bytearray.concat(right_side.inner)
+      |> hash.blake2b_256
+      |> HashedProof
   } else {
-    HashedProof(
-      do_right_proof(
-        builtin.slice_bytearray(0, proof_length, right_side.inner),
-        right_side,
-        bytearray.length(right_side.inner),
-        proof_length,
-      ),
-    )
+    builtin.slice_bytearray(0, proof_length, right_side.inner)
+      |> bytearray.concat(leaf_byte, _)
+      |> hash.blake2b_256
+      |> do_right_proof(
+          right_side,
+          bytearray.length(right_side.inner),
+          proof_length,
+        )
+      |> HashedProof
   }
 }
 
-pub fn right_proof_with_hash(
+/// The new item is on the left side of the tree
+/// so we append only right side proofs
+/// This assumes the starting hash is a branch hash and not a leaf hash
+fn right_proof_with_hash(
   starting_hash: ByteArray,
   right_side: RightMerkleProofs,
 ) -> HashedProof {
@@ -252,7 +275,7 @@ pub fn right_proof_with_hash(
   }
 }
 
-pub fn do_right_proof(
+fn do_right_proof(
   proof: ByteArray,
   side: RightMerkleProofs,
   side_length: Int,
