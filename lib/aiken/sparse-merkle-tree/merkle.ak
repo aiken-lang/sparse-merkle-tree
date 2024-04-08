@@ -137,8 +137,10 @@ pub fn combine_proofs(
 
       // Note we prepend a leaf byte to the account item in the proof to account for the leaf hash
       let new_combined_hash =
-        hashed_right.inner
-          |> bytearray.concat(account_hash, _)
+        account_hash
+          |> bytearray.concat(leaf_byte, _)
+          |> hash.blake2b_256
+          |> bytearray.concat(hashed_right.inner)
           |> hash.blake2b_256
           |> right_proof_with_hash(right_remaining)
           |> get_hashed_bytes

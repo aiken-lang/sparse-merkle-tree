@@ -7,8 +7,8 @@ use aiken/list
 use aiken/math
 use aiken/sparse_merkle_tree/merkle.{
   Left, Right, combine_proofs, convert_bytes_to_left_proofs,
-  convert_bytes_to_remainder_proofs, convert_bytes_to_right_proofs, left_proof,
-  right_proof, verify_root,
+  convert_bytes_to_remainder_proofs, convert_bytes_to_right_proofs, leaf_byte,
+  left_proof, right_proof, verify_root,
 }
 use aiken/string
 
@@ -162,17 +162,27 @@ test merkle_2(bytes_list via get_16_bytearrays()) {
 }
 
 test merkle_3(bytes_list via get_16_bytearrays()) {
+  let branch_list =
+    bytes_list
+      |> list.map(
+          fn(x) {
+            x
+              |> bytearray.concat(leaf_byte, _)
+              |> hash.blake2b_256
+          },
+        )
+
   let new_item = list_at(bytes_list, 9) |> hash.blake2b_256
 
   let left_side_closest = list_at(bytes_list, 7)
 
-  let left_side_neighbor = list_at(bytes_list, 6)
+  let left_side_neighbor = list_at(branch_list, 6)
 
   let right_side_closest = list_at(bytes_list, 12)
 
-  let right_side_neighbor = list_at(bytes_list, 13)
+  let right_side_neighbor = list_at(branch_list, 13)
 
-  let level_one = merklize_one_level(bytes_list)
+  let level_one = merklize_one_level(branch_list)
 
   let level_one_left = list_at(level_one, 2)
 
@@ -188,6 +198,8 @@ test merkle_3(bytes_list via get_16_bytearrays()) {
       fn(i, x) {
         if i == 2 {
           new_item
+            |> bytearray.concat(leaf_byte, _)
+            |> hash.blake2b_256
         } else {
           x
         }
@@ -266,17 +278,40 @@ fn merkle_4_setup() {
       #"03cfeeb613c20b73496ea0402a36ba05733d7cea285676c5f540e98b5ff39930",
     ]
 
+  let branch_list =
+    bytes_list
+      |> list.map(
+          fn(x) {
+            x
+              |> bytearray.concat(leaf_byte, _)
+              |> hash.blake2b_256
+          },
+        )
+
+  trace cbor.diagnostic(bytes_list)
+
+  trace cbor.diagnostic(branch_list)
+
   let new_item = list_at(bytes_list, 9) |> hash.blake2b_256
+
+  trace cbor.diagnostic(new_item)
+
+  trace new_item
+    |> bytearray.concat(leaf_byte, _)
+    |> hash.blake2b_256
+    |> cbor.diagnostic
 
   let left_side_closest = list_at(bytes_list, 7)
 
-  let left_side_neighbor = list_at(bytes_list, 6)
+  let left_side_neighbor = list_at(branch_list, 6)
 
   let right_side_closest = list_at(bytes_list, 12)
 
-  let right_side_neighbor = list_at(bytes_list, 13)
+  let right_side_neighbor = list_at(branch_list, 13)
 
-  let level_one = merklize_one_level(bytes_list)
+  let level_one = merklize_one_level(branch_list)
+
+  trace cbor.diagnostic(level_one)
 
   let level_one_left = list_at(level_one, 2)
 
@@ -292,21 +327,31 @@ fn merkle_4_setup() {
       fn(i, x) {
         if i == 2 {
           new_item
+            |> bytearray.concat(leaf_byte, _)
+            |> hash.blake2b_256
         } else {
           x
         }
       },
     )
 
+  trace cbor.diagnostic(level_two_modified)
+
   let level_three = merklize_one_level(level_two_modified)
+
+  trace cbor.diagnostic(level_three)
 
   expect [root] = merklize_one_level(level_three)
 
   let left_list =
     [left_side_closest, left_side_neighbor, level_one_left, level_two_left]
 
+  trace cbor.diagnostic(left_list)
+
   let right_list =
     [right_side_closest, right_side_neighbor, level_one_right]
+
+  trace cbor.diagnostic(right_list)
 
   let proof_list =
     []
@@ -352,6 +397,9 @@ test merkle_4() {
       new_item,
     )
 
+  trace cbor.diagnostic(root)
+  trace cbor.diagnostic(combined_hash)
+
   verify_root(remaining_proofs, combined_hash, root)?
 }
 
@@ -392,17 +440,27 @@ fn merkle_5_setup() {
       #"05cfeeb613c20b73496ea0402a36ba05733d7cea285676c5f540e98b5ff39930",
     ]
 
+  let branch_list =
+    bytes_list
+      |> list.map(
+          fn(x) {
+            x
+              |> bytearray.concat(leaf_byte, _)
+              |> hash.blake2b_256
+          },
+        )
+
   let new_item = list_at(bytes_list, 15) |> hash.blake2b_256
 
   let left_side_closest = list_at(bytes_list, 11)
 
-  let left_side_neighbor = list_at(bytes_list, 10)
+  let left_side_neighbor = list_at(branch_list, 10)
 
   let right_side_closest = list_at(bytes_list, 16)
 
-  let right_side_neighbor = list_at(bytes_list, 17)
+  let right_side_neighbor = list_at(branch_list, 17)
 
-  let level_one = merklize_one_level(bytes_list)
+  let level_one = merklize_one_level(branch_list)
 
   let level_one_left = list_at(level_one, 4)
 
@@ -418,6 +476,8 @@ fn merkle_5_setup() {
       fn(i, x) {
         if i == 3 {
           new_item
+            |> bytearray.concat(leaf_byte, _)
+            |> hash.blake2b_256
         } else {
           x
         }
