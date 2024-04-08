@@ -8,6 +8,7 @@ use crate::{
 };
 use core::cmp::Ordering;
 use core::marker::PhantomData;
+use std::fmt::Debug;
 /// The branch key
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub struct BranchKey {
@@ -116,14 +117,16 @@ impl<H: Hasher + Default, V, S: StoreReadOps<V>> SparseMerkleTree<H, V, S> {
     }
 }
 
-impl<H: Hasher + Default, V: Value, S: StoreReadOps<V> + StoreWriteOps<V>>
+impl<H: Hasher + Default, V: Value + Debug, S: StoreReadOps<V> + StoreWriteOps<V>>
     SparseMerkleTree<H, V, S>
 {
     /// Update a leaf, return new merkle root
     /// set to zero value to delete a key
     pub fn update(&mut self, key: H256, value: V) -> Result<&H256> {
         // compute and store new leaf
-        let node = MergeValue::from_h256(value.to_h256());
+        dbg!(&key, &value.to_h256::<H>(), &value);
+        let node = MergeValue::from_h256(value.to_h256::<H>());
+        dbg!(&node);
         // notice when value is zero the leaf is deleted, so we do not need to store it
         if !node.is_zero() {
             self.store.insert_leaf(key, value)?;
@@ -166,7 +169,9 @@ impl<H: Hasher + Default, V: Value, S: StoreReadOps<V> + StoreWriteOps<V>>
             }
             // prepare for next round
             current_key = parent_key;
+            // dbg!(&left, &right);
             current_node = merge::<H>(&left, &right);
+            // dbg!(&current_node);
         }
 
         self.root = current_node.hash::<H>();

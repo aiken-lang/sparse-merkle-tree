@@ -4,7 +4,7 @@ use aiken/hash
 
 pub const proof_length = 32
 
-pub const leaf_byte = "0d"
+pub const leaf_byte = #"0d"
 
 pub type Side {
   Left

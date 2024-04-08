@@ -55,7 +55,7 @@ fn my_test() {
     }
 
     dbg!(&tree.root());
-    dbg!("E853BE52D78FF9964C42CAE4855D755D1DC13411379DC9014CC1AB8E2AFDF7B4");
+    dbg!("DF5E143C29FBA70563C54DFFE6E5E64FE7EF8093C6C5D6CD99F54E23E9BAF68E");
 
     let x = tree
         .merkle_proof(vec![
@@ -78,7 +78,7 @@ fn my_test() {
     assert_eq!(
         *tree.root(),
         H256::from(hex!(
-            "E853BE52D78FF9964C42CAE4855D755D1DC13411379DC9014CC1AB8E2AFDF7B4"
+            "DF5E143C29FBA70563C54DFFE6E5E64FE7EF8093C6C5D6CD99F54E23E9BAF68E"
         ))
     );
 }

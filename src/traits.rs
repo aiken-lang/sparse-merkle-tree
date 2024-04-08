@@ -1,6 +1,6 @@
 use crate::{
     error::Error,
-    h256::H256,
+    h256::{H256, LEAF_BYTE},
     tree::{BranchKey, BranchNode},
 };
 
@@ -13,13 +13,16 @@ pub trait Hasher {
 
 /// Trait for define value structures
 pub trait Value {
-    fn to_h256(&self) -> H256;
+    fn to_h256<H: Hasher + Default>(&self) -> H256;
     fn zero() -> Self;
 }
 
 impl Value for H256 {
-    fn to_h256(&self) -> H256 {
-        *self
+    fn to_h256<H: Hasher + Default>(&self) -> H256 {
+        let mut hasher = H::default();
+        hasher.write_byte(LEAF_BYTE);
+        hasher.write_h256(self);
+        hasher.finish()
     }
     fn zero() -> Self {
         H256::zero()

@@ -288,18 +288,7 @@ fn merkle_4_setup() {
           },
         )
 
-  trace cbor.diagnostic(bytes_list)
-
-  trace cbor.diagnostic(branch_list)
-
   let new_item = list_at(bytes_list, 9) |> hash.blake2b_256
-
-  trace cbor.diagnostic(new_item)
-
-  trace new_item
-    |> bytearray.concat(leaf_byte, _)
-    |> hash.blake2b_256
-    |> cbor.diagnostic
 
   let left_side_closest = list_at(bytes_list, 7)
 
@@ -310,8 +299,6 @@ fn merkle_4_setup() {
   let right_side_neighbor = list_at(branch_list, 13)
 
   let level_one = merklize_one_level(branch_list)
-
-  trace cbor.diagnostic(level_one)
 
   let level_one_left = list_at(level_one, 2)
 
@@ -335,23 +322,15 @@ fn merkle_4_setup() {
       },
     )
 
-  trace cbor.diagnostic(level_two_modified)
-
   let level_three = merklize_one_level(level_two_modified)
-
-  trace cbor.diagnostic(level_three)
 
   expect [root] = merklize_one_level(level_three)
 
   let left_list =
     [left_side_closest, left_side_neighbor, level_one_left, level_two_left]
 
-  trace cbor.diagnostic(left_list)
-
   let right_list =
     [right_side_closest, right_side_neighbor, level_one_right]
-
-  trace cbor.diagnostic(right_list)
 
   let proof_list =
     []
@@ -396,9 +375,6 @@ test merkle_4() {
       right_proof_final,
       new_item,
     )
-
-  trace cbor.diagnostic(root)
-  trace cbor.diagnostic(combined_hash)
 
   verify_root(remaining_proofs, combined_hash, root)?
 }
@@ -570,9 +546,40 @@ test output_merkle() {
   let thing =
     thing
       |> list.sort(bytearray.compare)
-      |> list.map(fn(x) { (builtin.bytearray_to_integer(True, x), x) })
+
+  trace [
+    @"\n\noriginal thing\n",
+    cbor.diagnostic(thing),
+  ]
+    |> string.join(@"")
+
+  let thing =
+    thing
+      |> list.map(
+          fn(x) {
+            (
+              builtin.bytearray_to_integer(True, x),
+              x
+                |> bytearray.concat(leaf_byte, _)
+                |> hash.blake2b_256,
+            )
+          },
+        )
+
+  trace [
+    @"\n\nthing\n",
+    cbor.diagnostic(thing),
+  ]
+    |> string.join(@"")
 
   let (_, level_one) = sparse_merkelize_level(thing)
+
+  trace [
+    @"\n\nlevel_one\n",
+    cbor.diagnostic(level_one),
+  ]
+    |> string.join(@"")
+
   let (_, level_two) = sparse_merkelize_level(level_one)
   let (_, level_three) = sparse_merkelize_level(level_two)
   let (_, level_four) = sparse_merkelize_level(level_three)

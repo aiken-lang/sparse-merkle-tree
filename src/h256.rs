@@ -6,6 +6,7 @@ pub struct H256([u8; 32]);
 
 const ZERO: H256 = H256([0u8; 32]);
 const BYTE_SIZE: u8 = 8;
+pub const LEAF_BYTE: u8 = 13;
 
 impl Debug for H256 {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
