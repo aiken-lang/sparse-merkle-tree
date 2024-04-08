@@ -26,6 +26,13 @@ I have added an implementation of the offchain code in rust.
 This implementation was forked from https://github.com/nervosnetwork/sparse-merkle-tree/tree/master
 and then modified to work with the on chain code.
 
+TODO: Way more efficient off-chain storage usage. 
+
+We don't need to keep every single (branch_key, branch_value) in the hash map where 
+the branch has a child of 0. Instead upon insertion we can detect when the inserted 
+value key has a common ancestor with each existing member key and insert branches based off the ancestors. 
+Much less space used.
+
 
 ## Documentation
 
