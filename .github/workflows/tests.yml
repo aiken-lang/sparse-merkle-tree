@@ -18,3 +18,5 @@ jobs:
       - run: aiken fmt --check
       - run: aiken check -D
       - run: aiken build
+      - name: Run unit tests
+        run: cargo test --verbose --workspace
