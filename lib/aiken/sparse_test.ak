@@ -509,6 +509,7 @@ fn merkle_5_setup() {
 test output_merkle() {
   let thing =
     [
+      #"0000000000000000000000000000000000000000000000000000000000000000",
       #"037989aac4a85a30998d29e5041f8c6cf398d370f08b48ce258cdc376e5b8c8c",
       #"0379899ac4a85a30891d29e5041f8c6cf398d370f08b48ce258cdc376e5b8c8c",
       #"2483b790b459b5134f357e5afed5149073b21bb6808650f1da5c821bef9fb25a",
@@ -541,17 +542,12 @@ test output_merkle() {
       #"83d32921e87c9a88db3ac56a1e6b8552c9732911a977927bd2e58b3add48683c",
       #"064d2e79dc1f95fbdf8ebad4f95676c10ffc1696131731badf30b38f4f60b66d",
       #"05cfeeb613c20b73496ea0402a36ba05733d7cea285676c5f540e98b5ff39930",
+      #"ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
     ]
 
   let thing =
     thing
       |> list.sort(bytearray.compare)
-
-  trace [
-    @"\n\noriginal thing\n",
-    cbor.diagnostic(thing),
-  ]
-    |> string.join(@"")
 
   let thing =
     thing
@@ -566,20 +562,7 @@ test output_merkle() {
           },
         )
 
-  trace [
-    @"\n\nthing\n",
-    cbor.diagnostic(thing),
-  ]
-    |> string.join(@"")
-
   let (_, level_one) = sparse_merkelize_level(thing)
-
-  trace [
-    @"\n\nlevel_one\n",
-    cbor.diagnostic(level_one),
-  ]
-    |> string.join(@"")
-
   let (_, level_two) = sparse_merkelize_level(level_one)
   let (_, level_three) = sparse_merkelize_level(level_two)
   let (_, level_four) = sparse_merkelize_level(level_three)
@@ -588,24 +571,28 @@ test output_merkle() {
   let (_, level_seven) = sparse_merkelize_level(level_six)
   let (_, level_eight) = sparse_merkelize_level(level_seven)
   let (_, level_nine) = sparse_merkelize_level(level_eight)
-  let (_, level_ten) = sparse_merkelize_level(level_nine)
-  let (_, level_eleven) = sparse_merkelize_level(level_ten)
-  let (_, level_twelve) = sparse_merkelize_level(level_eleven)
-
-  let (_, level_thirteen) = sparse_merkelize_level(level_twelve)
-  let (_, level_fourteen) = sparse_merkelize_level(level_thirteen)
-  let (_, level_fifteen) = sparse_merkelize_level(level_fourteen)
-  let (_, level_sixteen) = sparse_merkelize_level(level_fifteen)
-  let (_, level_seventeen) = sparse_merkelize_level(level_sixteen)
-  let (_, level_eighteen) = sparse_merkelize_level(level_seventeen)
-  let (_, level_nineteen) = sparse_merkelize_level(level_eighteen)
-  let (_, level_twenty) = sparse_merkelize_level(level_nineteen)
-  let (_, level_twenty_one) = sparse_merkelize_level(level_twenty)
-  let (_, level_twenty_two) = sparse_merkelize_level(level_twenty_one)
 
   trace [
-    @"\n\nlevel_twenty_two\n",
-    cbor.diagnostic(level_twenty_two),
+    @"\n\nthing\n",
+    cbor.diagnostic(thing),
+    @"\n\nlevel_one\n",
+    cbor.diagnostic(level_one),
+    @"\n\nlevel_two\n",
+    cbor.diagnostic(level_two),
+    @"\n\nlevel_three\n",
+    cbor.diagnostic(level_three),
+    @"\n\nlevel_four\n",
+    cbor.diagnostic(level_four),
+    @"\n\nlevel_five\n",
+    cbor.diagnostic(level_five),
+    @"\n\nlevel_six\n",
+    cbor.diagnostic(level_six),
+    @"\n\nlevel_seven\n",
+    cbor.diagnostic(level_seven),
+    @"\n\nlevel_eight\n",
+    cbor.diagnostic(level_eight),
+    @"\n\nlevel_nine\n",
+    cbor.diagnostic(level_nine),
   ]
     |> string.join(@"")
   True

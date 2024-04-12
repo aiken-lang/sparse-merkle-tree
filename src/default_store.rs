@@ -14,12 +14,6 @@ pub struct DefaultStore<V> {
 }
 
 impl<V> DefaultStore<V> {
-    pub fn branches_map(&self) -> &HashMap<BranchKey, BranchNode> {
-        &self.branches_map
-    }
-    pub fn leaves_map(&self) -> &HashMap<H256, V> {
-        &self.leaves_map
-    }
     pub fn clear(&mut self) {
         self.branches_map.clear();
         self.leaves_map.clear();
@@ -32,6 +26,12 @@ impl<V: Clone> StoreReadOps<V> for DefaultStore<V> {
     }
     fn get_leaf(&self, leaf_key: &H256) -> Result<Option<V>, Error> {
         Ok(self.leaves_map.get(leaf_key).cloned())
+    }
+    fn branches_map(&self) -> &HashMap<BranchKey, BranchNode> {
+        &self.branches_map
+    }
+    fn leaves_map(&self) -> &HashMap<H256, V> {
+        &self.leaves_map
     }
 }
 

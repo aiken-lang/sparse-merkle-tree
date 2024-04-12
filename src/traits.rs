@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use crate::{
     error::Error,
     h256::{H256, LEAF_BYTE},
@@ -15,6 +17,7 @@ pub trait Hasher {
 pub trait Value {
     fn to_h256<H: Hasher + Default>(&self) -> H256;
     fn zero() -> Self;
+    fn max() -> Self;
 }
 
 impl Value for H256 {
@@ -27,12 +30,17 @@ impl Value for H256 {
     fn zero() -> Self {
         H256::zero()
     }
+    fn max() -> Self {
+        H256::max()
+    }
 }
 
 /// Traits for customize backend storage
 pub trait StoreReadOps<V> {
     fn get_branch(&self, branch_key: &BranchKey) -> Result<Option<BranchNode>, Error>;
     fn get_leaf(&self, leaf_key: &H256) -> Result<Option<V>, Error>;
+    fn branches_map(&self) -> &HashMap<BranchKey, BranchNode>;
+    fn leaves_map(&self) -> &HashMap<H256, V>;
 }
 
 pub trait StoreWriteOps<V> {

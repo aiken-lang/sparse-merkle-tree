@@ -5,6 +5,7 @@ use std::{cmp::Ordering, fmt::Debug};
 pub struct H256([u8; 32]);
 
 const ZERO: H256 = H256([0u8; 32]);
+const MAX: H256 = H256([255u8; 32]);
 const BYTE_SIZE: u8 = 8;
 pub const LEAF_BYTE: u8 = 13;
 
@@ -17,6 +18,10 @@ impl Debug for H256 {
 impl H256 {
     pub const fn zero() -> Self {
         ZERO
+    }
+
+    pub const fn max() -> Self {
+        MAX
     }
 
     pub fn is_zero(&self) -> bool {
@@ -65,6 +70,32 @@ impl H256 {
             }
         }
         0
+    }
+
+    /// Treat H256 as a path in a tree
+    /// return parent_path of self
+    pub fn parent_path_by_height(&self, height: u8) -> Self {
+        if height == core::u8::MAX {
+            H256::zero()
+        } else {
+            let height = height + 1;
+            let mut target = H256::zero();
+
+            let end_byte = 32 - (height / BYTE_SIZE) as usize;
+
+            // copy bytes
+            target.0[0..end_byte].copy_from_slice(&self.0[0..end_byte]);
+
+            // reset remain bytes
+            let remain = u32::from(height % BYTE_SIZE);
+
+            if remain > 0 {
+                let x = target.0[end_byte - 1] / 2u8.pow(remain);
+                target.0[end_byte - 1] = x;
+            }
+
+            target
+        }
     }
 
     /// Treat H256 as a path in a tree
