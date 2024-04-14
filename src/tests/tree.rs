@@ -76,11 +76,15 @@ fn my_test() {
 
     if started_left_side {
         let mut left_hash = left_vec.remove(0);
+
+        left_hash = MergeValue::from_h256(left_hash.hash().to_h256::<Blake2bHasher>());
         for val in left_vec {
             left_hash = merge::<Blake2bHasher>(&val, &left_hash);
         }
 
         let mut right_hash = right_vec.remove(0);
+
+        right_hash = MergeValue::from_h256(right_hash.hash().to_h256::<Blake2bHasher>());
         for val in right_vec {
             right_hash = merge::<Blake2bHasher>(&right_hash, &val);
         }

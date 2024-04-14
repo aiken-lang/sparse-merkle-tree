@@ -440,27 +440,27 @@ impl<H: Hasher + Default, V: Value, S: StoreReadOps<V>> SparseMerkleTree<H, V, S
         }
 
         let mut starting_side = proof.pop().unwrap();
-        let mut started_left_side = matches!(starting_side.1, Side::Left(_));
+        let started_left_side = matches!(starting_side.1, Side::Left(_));
 
         let mut left_vec = vec![];
         let mut right_vec = vec![];
         let mut continuing_side: Vec<MergeValue> = vec![];
 
         loop {
-            match starting_side.0 {
-                ChildKey::Leaf(_) => {
-                    match &starting_side.1 {
-                        Side::Left(x) => {
-                            left_vec.push(x.clone());
+            match &starting_side.0 {
+                ChildKey::Leaf(x) => {
+                    match starting_side.1 {
+                        Side::Left(_) => {
+                            left_vec.push(MergeValue::from_h256(*x));
                         }
-                        Side::Right(x) => {
-                            right_vec.push(x.clone());
+                        Side::Right(_) => {
+                            right_vec.push(MergeValue::from_h256(*x));
                         }
                     }
                     break;
                 }
                 ChildKey::Branch(bkey) => {
-                    let next_child = self.store().get_branch(&bkey)?.unwrap();
+                    let next_child = self.store().get_branch(bkey)?.unwrap();
                     match &starting_side.1 {
                         Side::Left(_) => {
                             left_vec.push(next_child.left.0);
@@ -487,20 +487,20 @@ impl<H: Hasher + Default, V: Value, S: StoreReadOps<V>> SparseMerkleTree<H, V, S
         let mut other_side = proof.pop().unwrap();
 
         loop {
-            match other_side.0 {
-                ChildKey::Leaf(_) => {
-                    match &other_side.1 {
-                        Side::Left(x) => {
-                            left_vec.push(x.clone());
+            match &other_side.0 {
+                ChildKey::Leaf(x) => {
+                    match other_side.1 {
+                        Side::Left(_) => {
+                            left_vec.push(MergeValue::from_h256(*x));
                         }
-                        Side::Right(x) => {
-                            right_vec.push(x.clone());
+                        Side::Right(_) => {
+                            right_vec.push(MergeValue::from_h256(*x));
                         }
                     }
                     break;
                 }
                 ChildKey::Branch(bkey) => {
-                    let next_child = self.store().get_branch(&bkey)?.unwrap();
+                    let next_child = self.store().get_branch(bkey)?.unwrap();
                     match &other_side.1 {
                         Side::Left(_) => {
                             left_vec.push(next_child.left.0);
@@ -514,6 +514,7 @@ impl<H: Hasher + Default, V: Value, S: StoreReadOps<V>> SparseMerkleTree<H, V, S
                 }
             }
         }
+
         left_vec.reverse();
         right_vec.reverse();
         continuing_side.reverse();
