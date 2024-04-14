@@ -1,7 +1,13 @@
 use hexlit::hex;
+use itertools::Itertools;
 
 use crate::{
-    blake2b::Blake2bHasher, default_store::DefaultStore, h256::H256, tree::SparseMerkleTree,
+    blake2b::Blake2bHasher,
+    default_store::DefaultStore,
+    h256::H256,
+    merge::{merge, MergeValue},
+    traits::{StoreReadOps, Value},
+    tree::SparseMerkleTree,
 };
 
 #[allow(clippy::upper_case_acronyms)]
@@ -54,22 +60,12 @@ fn my_test() {
         tree.update(key, value).expect("update");
     }
 
-    // let x = tree
-    //     .merkle_proof(vec![
-    //         hex!("037989aac4a85a30998d29e5041f8c6cf398d370f08b48ce258cdc376e5b8c8c").into(),
-    //         hex!("04cfeeb613c20b73496ea0402a31ba05733d7cea285676c5f540e98b5ff39930").into(),
-    //         hex!("05cfeeb613c20b73496ea0402a36ba05733d7cea285676c5f540e98b5ff39930").into(),
-    //     ])
-    //     .unwrap()
-    //     .merkle_path()
-    //     .iter()
-    //     .zip(vec![
-    //         "037989aac4a85a30998d29e5041f8c6cf398d370f08b48ce258cdc376e5b8c8c",
-    //         "04cfeeb613c20b73496ea0402a31ba05733d7cea285676c5f540e98b5ff39930",
-    //         "05cfeeb613c20b73496ea0402a36ba05733d7cea285676c5f540e98b5ff39930",
-    //     ])
-    //     .map(|(x, y)| (y, x.1.clone()))
-    //     .collect::<Vec<_>>();
+    let (proofs, mut left_vec, continuing_side, mut right_vec, started_left_side) = tree
+        .insertion_merkle_proof(vec![hex!(
+            "037989aac4a85a30998d29e5041f8c6cf398d370f08b48ce258cdc376e5b8c8c"
+        )
+        .into()])
+        .unwrap();
 
     assert_eq!(
         *tree.root(),
@@ -77,4 +73,47 @@ fn my_test() {
             "758DA3290AA238EB24AD1B1C672CC8C04EC04D288842E0A1D7CD01536AA2CBE7"
         ))
     );
+
+    if started_left_side {
+        let mut left_hash = left_vec.remove(0);
+        for val in left_vec {
+            left_hash = merge::<Blake2bHasher>(&val, &left_hash);
+        }
+
+        let mut right_hash = right_vec.remove(0);
+        for val in right_vec {
+            right_hash = merge::<Blake2bHasher>(&right_hash, &val);
+        }
+
+        let mut with_item_hash = merge::<Blake2bHasher>(
+            &left_hash,
+            &MergeValue::from_h256(
+                H256::from(hex!(
+                    "037989aac4a85a30998d29e5041f8c6cf398d370f08b48ce258cdc376e5b8c8c"
+                ))
+                .to_h256::<Blake2bHasher>(),
+            ),
+        );
+
+        for val in continuing_side {
+            with_item_hash = merge::<Blake2bHasher>(&val, &with_item_hash);
+        }
+
+        let mut combined_hash = merge::<Blake2bHasher>(&with_item_hash, &right_hash);
+
+        for val in proofs {
+            match val {
+                crate::merkle_proof::Side::Left(x) => {
+                    combined_hash = merge::<Blake2bHasher>(&x, &combined_hash);
+                }
+                crate::merkle_proof::Side::Right(x) => {
+                    combined_hash = merge::<Blake2bHasher>(&combined_hash, &x);
+                }
+            }
+        }
+
+        assert_eq!(*tree.root(), combined_hash.hash());
+    } else {
+        todo!()
+    }
 }
