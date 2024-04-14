@@ -77,13 +77,16 @@ fn my_test() {
     if started_left_side {
         let mut left_hash = left_vec.remove(0);
 
+        // Need to do a leaf hash
         left_hash = MergeValue::from_h256(left_hash.hash().to_h256::<Blake2bHasher>());
+
         for val in left_vec {
             left_hash = merge::<Blake2bHasher>(&val, &left_hash);
         }
 
         let mut right_hash = right_vec.remove(0);
 
+        // Need to do a leaf hash
         right_hash = MergeValue::from_h256(right_hash.hash().to_h256::<Blake2bHasher>());
         for val in right_vec {
             right_hash = merge::<Blake2bHasher>(&right_hash, &val);
@@ -118,6 +121,50 @@ fn my_test() {
 
         assert_eq!(*tree.root(), combined_hash.hash());
     } else {
-        todo!()
+        let mut right_hash = right_vec.remove(0);
+
+        // Need to do a leaf hash
+        right_hash = MergeValue::from_h256(right_hash.hash().to_h256::<Blake2bHasher>());
+
+        for val in right_vec {
+            right_hash = merge::<Blake2bHasher>(&right_hash, &val);
+        }
+
+        let mut left_hash = left_vec.remove(0);
+
+        // Need to do a leaf hash
+        left_hash = MergeValue::from_h256(left_hash.hash().to_h256::<Blake2bHasher>());
+        for val in left_vec {
+            left_hash = merge::<Blake2bHasher>(&val, &left_hash);
+        }
+
+        let mut with_item_hash = merge::<Blake2bHasher>(
+            &MergeValue::from_h256(
+                H256::from(hex!(
+                    "037989aac4a85a30998d29e5041f8c6cf398d370f08b48ce258cdc376e5b8c8c"
+                ))
+                .to_h256::<Blake2bHasher>(),
+            ),
+            &right_hash,
+        );
+
+        for val in continuing_side {
+            with_item_hash = merge::<Blake2bHasher>(&with_item_hash, &val);
+        }
+
+        let mut combined_hash = merge::<Blake2bHasher>(&left_hash, &with_item_hash);
+
+        for val in proofs {
+            match val {
+                crate::merkle_proof::Side::Left(x) => {
+                    combined_hash = merge::<Blake2bHasher>(&x, &combined_hash);
+                }
+                crate::merkle_proof::Side::Right(x) => {
+                    combined_hash = merge::<Blake2bHasher>(&combined_hash, &x);
+                }
+            }
+        }
+
+        assert_eq!(*tree.root(), combined_hash.hash());
     }
 }
