@@ -125,7 +125,7 @@ impl<H: Hasher + Default, V: Value + Debug, S: StoreReadOps<V> + StoreWriteOps<V
             .get_branch(&root_branch_key)
             .map(|branch_node| {
                 branch_node
-                    .map(|n| merge::<H>(&n.left.0, &n.right.0).hash::<H>())
+                    .map(|n| merge::<H>(&n.left.0, &n.right.0).hash())
                     .unwrap_or_default()
             })
             .map(|root| SparseMerkleTree::new(root, store))
@@ -177,7 +177,7 @@ impl<H: Hasher + Default, V, S: StoreReadOps<V>> SparseMerkleTree<H, V, S> {
             .get_branch(&root_branch_key)
             .map(|branch_node| {
                 branch_node
-                    .map(|n| merge::<H>(&n.left.0, &n.right.0).hash::<H>())
+                    .map(|n| merge::<H>(&n.left.0, &n.right.0).hash())
                     .unwrap_or_default()
             })
             .map(|root| SparseMerkleTree::new(root, store))
@@ -344,48 +344,8 @@ impl<H: Hasher + Default, V: Value + Debug, S: StoreReadOps<V> + StoreWriteOps<V
 
         let (root_key, _) = self.recurse_tree(node, key, last_intersection_key, u8::MAX)?;
 
-        self.root = root_key.hash::<H>();
+        self.root = root_key.hash();
         Ok(&self.root)
-
-        // for height in 0..=u8::MAX {
-        //     let parent_key = current_key.parent_path(height);
-        //     let parent_branch_key = BranchKey::new(height, parent_key);
-
-        //     let (left, right) =
-        //         if let Some(parent_branch) = self.store.get_branch(&parent_branch_key)? {
-        //             if current_key.is_right(height) {
-        //                 (parent_branch.left, current_node)
-        //             } else {
-        //                 (current_node, parent_branch.right)
-        //             }
-        //         } else if current_key.is_right(height) {
-        //             (MergeValue::zero(), current_node)
-        //         } else {
-        //             (current_node, MergeValue::zero())
-        //         };
-
-        //     if !left.is_zero() || !right.is_zero() {
-        //         // insert or update branch
-        //         self.store.insert_branch(
-        //             parent_branch_key,
-        //             BranchNode {
-        //                 left: left.clone(),
-        //                 right: right.clone(),
-        //             },
-        //         )?;
-        //     } else {
-        //         // remove empty branch
-        //         self.store.remove_branch(&parent_branch_key)?;
-        //     }
-        //     // prepare for next round
-        //     current_key = parent_key;
-        //     //
-        //     current_node = merge::<H>(&left, &right);
-        //     //
-        // }
-
-        // self.root = current_node.hash::<H>();
-        // Ok(&self.root)
     }
 }
 
