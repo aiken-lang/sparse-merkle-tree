@@ -1,8 +1,10 @@
+use itertools::Itertools;
+
 use crate::{
     error::{Error, Result},
     h256::H256,
     merge::{merge, MergeValue},
-    merkle_proof::MerkleProof,
+    merkle_proof::{MerkleProof, Side},
     traits::{Hasher, StoreReadOps, StoreWriteOps, Value},
 };
 use core::cmp::Ordering;
@@ -58,7 +60,9 @@ impl ChildKey {
             }
             ChildKey::Branch(key) => {
                 for i in 1..max_height {
-                    let parent_key_leaf = if (key.height + 1) / 8 == i / 8 {
+                    let parent_key_leaf = if key.height > i {
+                        continue;
+                    } else if (key.height + 1) / 8 == (i + 1) / 8 {
                         key.node_key
                             .parent_path_by_height(i - ((key.height + 1) % 8))
                     } else {
@@ -240,7 +244,6 @@ impl<H: Hasher + Default, V: Value + Debug, S: StoreReadOps<V> + StoreWriteOps<V
                     .get_intersecting_height(current_key, current_height);
 
                 match (left_inter_height, right_inter_height) {
-                    (Some(a), Some(b)) => unreachable!("{a:#?} {b:#?}"),
                     (Some(left_height), None) => {
                         let new_child = self.recurse_tree(
                             current_node,
@@ -311,6 +314,7 @@ impl<H: Hasher + Default, V: Value + Debug, S: StoreReadOps<V> + StoreWriteOps<V
                             Ok((merge_value, ChildKey::Branch(parent_branch_key)))
                         }
                     }
+                    (Some(a), Some(b)) => unreachable!("{a:#?} {b:#?}"),
                 }
             }
         }
@@ -360,7 +364,16 @@ impl<H: Hasher + Default, V: Value, S: StoreReadOps<V>> SparseMerkleTree<H, V, S
     }
 
     /// Generate merkle proof
-    pub fn merkle_proof(&self, mut keys: Vec<H256>) -> Result<MerkleProof> {
+    pub fn insertion_merkle_proof(
+        &self,
+        mut keys: Vec<H256>,
+    ) -> Result<(
+        Vec<Side>,
+        Vec<MergeValue>,
+        Vec<MergeValue>,
+        Vec<MergeValue>,
+        bool,
+    )> {
         if keys.is_empty() {
             return Err(Error::EmptyKeys);
         }
@@ -368,83 +381,149 @@ impl<H: Hasher + Default, V: Value, S: StoreReadOps<V>> SparseMerkleTree<H, V, S
         // sort keys
         keys.sort_unstable();
 
-        todo!();
+        let key = keys[0];
 
-        // Collect leaf bitmaps
-        // let mut leaves_bitmap: Vec<H256> = Default::default();
-        // for current_key in &keys {
-        //     let mut current_key = *current_key;
-        //     let mut bitmap = H256::zero();
-        //     for height in 0..=u8::MAX {
-        //         let parent_key = current_key.parent_path(height);
-        //         let parent_branch_key = BranchKey::new(height, parent_key);
-        //         if let Some(parent_branch) = self.store.get_branch(&parent_branch_key)? {
-        //             let sibling = if current_key.is_right(height) {
-        //                 parent_branch.left
-        //             } else {
-        //                 parent_branch.right
-        //             };
-        //             if !sibling.is_zero() {
-        //                 bitmap.set_bit(height);
-        //             }
-        //         } else {
-        //             // The key is not in the tree (support non-inclusion proof)
-        //         }
-        //         current_key = parent_key;
-        //     }
-        //     leaves_bitmap.push(bitmap);
-        // }
+        // recompute the tree from top to bottom
+        let x: Vec<_> = self
+            .store()
+            .branches_map()
+            .iter()
+            .filter(|x| x.0.height == 255)
+            .collect();
 
-        // let mut proof: Vec<(H256, Vec<Side>)> = Default::default();
-        // let mut stack_fork_height = [0u8; MAX_STACK_SIZE]; // store fork height
-        // let mut stack_top = 0;
-        // let mut leaf_index = 0;
-        // while leaf_index < keys.len() {
-        //     let bitmap = leaves_bitmap[leaf_index];
-        //     proof.push((bitmap, Vec::new()));
-        //     let mut leaf_key = keys[leaf_index];
-        //     let fork_height = u8::MAX;
+        assert!(x.len() == 1);
 
-        //     for height in 0..=fork_height {
-        //         if height == fork_height && leaf_index + 1 < keys.len() {
-        //             // If it's not final round, we don't need to merge to root (height=255)
-        //             break;
-        //         }
-        //         let parent_key = leaf_key.parent_path(height);
-        //         let is_right = leaf_key.is_right(height);
+        let mut branch_key = x[0].0.clone();
+        let mut proof = Vec::new();
 
-        //         // has non-zero sibling
-        //         if leaves_bitmap[leaf_index].get_bit(height) {
-        //             let parent_branch_key = BranchKey::new(height, parent_key);
-        //             if let Some(parent_branch) = self.store.get_branch(&parent_branch_key)? {
-        //                 let sibling = if is_right {
-        //                     parent_branch.left
-        //                 } else {
-        //                     parent_branch.right
-        //                 };
-        //                 if !sibling.is_zero() {
-        //                     proof
-        //                         .last_mut()
-        //                         .expect("proof is not empty")
-        //                         .1
-        //                         .push(if is_right {
-        //                             Side::Left(sibling)
-        //                         } else {
-        //                             Side::Right(sibling)
-        //                         });
-        //                 }
-        //             } else {
-        //                 // The key is not in the tree (support non-inclusion proof)
-        //             }
-        //         }
-        //         leaf_key = parent_key;
-        //     }
-        //     debug_assert!(stack_top < MAX_STACK_SIZE);
-        //     stack_fork_height[stack_top] = fork_height;
-        //     stack_top += 1;
-        //     leaf_index += 1;
-        // }
+        loop {
+            let branch = self.store.get_branch(&branch_key)?.unwrap();
 
-        // Ok(MerkleProof::new(leaves_bitmap, proof))
+            let left_inter_height = branch
+                .left
+                .1
+                .get_intersecting_height(key, branch_key.height);
+
+            let right_inter_height = branch
+                .right
+                .1
+                .get_intersecting_height(key, branch_key.height);
+
+            match (left_inter_height, right_inter_height) {
+                (None, Some(_)) => {
+                    proof.push((branch.left.1, Side::Left(branch.left.0)));
+                    match branch.right.1 {
+                        ChildKey::Leaf(x) => {
+                            assert!(x == key);
+                            break;
+                        }
+                        ChildKey::Branch(x) => {
+                            branch_key = x;
+                        }
+                    }
+                }
+                (Some(_), None) => {
+                    proof.push((branch.right.1, Side::Right(branch.right.0)));
+                    match branch.left.1 {
+                        ChildKey::Leaf(x) => {
+                            assert!(x == key);
+                            break;
+                        }
+                        ChildKey::Branch(x) => {
+                            branch_key = x;
+                        }
+                    }
+                }
+                (Some(x), Some(y)) => unreachable!("{x:#?} {y:#?} impossible"),
+                (None, None) => unreachable!("also impossible"),
+            }
+        }
+
+        let mut starting_side = proof.pop().unwrap();
+        let mut started_left_side = matches!(starting_side.1, Side::Left(_));
+
+        let mut left_vec = vec![];
+        let mut right_vec = vec![];
+        let mut continuing_side: Vec<MergeValue> = vec![];
+
+        loop {
+            match starting_side.0 {
+                ChildKey::Leaf(_) => {
+                    match &starting_side.1 {
+                        Side::Left(x) => {
+                            left_vec.push(x.clone());
+                        }
+                        Side::Right(x) => {
+                            right_vec.push(x.clone());
+                        }
+                    }
+                    break;
+                }
+                ChildKey::Branch(bkey) => {
+                    let next_child = self.store().get_branch(&bkey)?.unwrap();
+                    match &starting_side.1 {
+                        Side::Left(_) => {
+                            left_vec.push(next_child.left.0);
+                            starting_side = (next_child.right.1, Side::Left(next_child.right.0));
+                        }
+                        Side::Right(_) => {
+                            right_vec.push(next_child.right.0);
+                            starting_side = (next_child.left.1, Side::Right(next_child.left.0));
+                        }
+                    }
+                }
+            }
+        }
+
+        while let Some(thing) = proof.pop() {
+            if (starting_side.1).is_same_side(&thing.1) {
+                continuing_side.push(thing.1.merge_value());
+            } else {
+                proof.push(thing);
+                break;
+            }
+        }
+
+        let mut other_side = proof.pop().unwrap();
+
+        loop {
+            match other_side.0 {
+                ChildKey::Leaf(_) => {
+                    match &other_side.1 {
+                        Side::Left(x) => {
+                            left_vec.push(x.clone());
+                        }
+                        Side::Right(x) => {
+                            right_vec.push(x.clone());
+                        }
+                    }
+                    break;
+                }
+                ChildKey::Branch(bkey) => {
+                    let next_child = self.store().get_branch(&bkey)?.unwrap();
+                    match &other_side.1 {
+                        Side::Left(_) => {
+                            left_vec.push(next_child.left.0);
+                            other_side = (next_child.right.1, Side::Left(next_child.right.0));
+                        }
+                        Side::Right(_) => {
+                            right_vec.push(next_child.right.0);
+                            other_side = (next_child.left.1, Side::Right(next_child.left.0));
+                        }
+                    }
+                }
+            }
+        }
+        left_vec.reverse();
+        right_vec.reverse();
+        continuing_side.reverse();
+
+        Ok((
+            proof.iter().map(|x| x.1.clone()).rev().collect::<Vec<_>>(),
+            left_vec,
+            continuing_side,
+            right_vec,
+            started_left_side,
+        ))
     }
 }

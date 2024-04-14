@@ -6,10 +6,24 @@ pub enum Side {
     Right(MergeValue),
 }
 
+impl Side {
+    pub fn is_same_side(&self, other: &Side) -> bool {
+        matches!(
+            (self, other),
+            (Side::Left(_), Side::Left(_)) | (Side::Right(_), Side::Right(_))
+        )
+    }
+
+    pub fn merge_value(self) -> MergeValue {
+        match self {
+            Side::Left(v) => v,
+            Side::Right(v) => v,
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct MerkleProof {
-    // leaf bitmap, bitmap.get_bit(height) is true means there need a non zero sibling in this height
-    leaves_bitmap: Vec<H256>,
     // needed sibling node hash
     merkle_path: Vec<(H256, Vec<Side>)>,
 }
@@ -18,30 +32,14 @@ impl MerkleProof {
     /// Create MerkleProof
     /// leaves_bitmap: leaf bitmap, bitmap.get_bit(height) is true means there need a non zero sibling in this height
     /// proof: needed sibling node hash
-    pub fn new(leaves_bitmap: Vec<H256>, merkle_path: Vec<(H256, Vec<Side>)>) -> Self {
-        MerkleProof {
-            leaves_bitmap,
-            merkle_path,
-        }
+    pub fn new(merkle_path: Vec<(H256, Vec<Side>)>) -> Self {
+        MerkleProof { merkle_path }
     }
 
     /// Destruct the structure, useful for serialization
-    pub fn take(self) -> (Vec<H256>, Vec<(H256, Vec<Side>)>) {
-        let MerkleProof {
-            leaves_bitmap,
-            merkle_path,
-        } = self;
-        (leaves_bitmap, merkle_path)
-    }
-
-    /// number of leaves required by this merkle proof
-    pub fn leaves_count(&self) -> usize {
-        self.leaves_bitmap.len()
-    }
-
-    /// return the inner leaves_bitmap vector
-    pub fn leaves_bitmap(&self) -> &Vec<H256> {
-        &self.leaves_bitmap
+    pub fn take(self) -> Vec<(H256, Vec<Side>)> {
+        let MerkleProof { merkle_path } = self;
+        merkle_path
     }
 
     /// return sibling node hashes
