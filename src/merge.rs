@@ -1,8 +1,6 @@
 use crate::h256::H256;
 use crate::traits::Hasher;
 
-const MERGE_ZEROS: u8 = 2;
-
 #[derive(Debug, Eq, PartialEq, Clone)]
 pub struct MergeValue {
     hash: H256,

@@ -1,12 +1,11 @@
 use hexlit::hex;
-use itertools::Itertools;
 
 use crate::{
     blake2b::Blake2bHasher,
     default_store::DefaultStore,
     h256::H256,
     merge::{merge, MergeValue},
-    traits::{StoreReadOps, Value},
+    traits::Value,
     tree::SparseMerkleTree,
 };
 
@@ -60,11 +59,13 @@ fn my_test() {
         tree.update(key, value).expect("update");
     }
 
-    let (proofs, mut left_vec, continuing_side, mut right_vec, started_left_side) = tree
-        .insertion_merkle_proof(vec![hex!(
+    let (proofs, mut left_vec, continuing_side, mut right_vec, started_left_side, _key) = tree
+        .modify_root_proof(vec![hex!(
             "037989aac4a85a30998d29e5041f8c6cf398d370f08b48ce258cdc376e5b8c8c"
         )
         .into()])
+        .unwrap()
+        .pop()
         .unwrap();
 
     assert_eq!(

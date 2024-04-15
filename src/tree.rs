@@ -1,10 +1,8 @@
-use itertools::Itertools;
-
 use crate::{
     error::{Error, Result},
     h256::H256,
     merge::{merge, MergeValue},
-    merkle_proof::{MerkleProof, Side},
+    merkle_proof::Side,
     traits::{Hasher, StoreReadOps, StoreWriteOps, Value},
 };
 use core::cmp::Ordering;
@@ -197,6 +195,7 @@ impl<H: Hasher + Default, V: Value + Debug, S: StoreReadOps<V> + StoreWriteOps<V
         current_key: H256,
         intersection_branch: ChildKey,
         current_height: u8,
+        insertion: bool,
     ) -> Result<(MergeValue, ChildKey)> {
         match intersection_branch {
             ChildKey::Leaf(x) => {
@@ -206,28 +205,33 @@ impl<H: Hasher + Default, V: Value + Debug, S: StoreReadOps<V> + StoreWriteOps<V
                 let x_value =
                     MergeValue::from_h256(self.store.get_leaf(&x)?.unwrap().to_h256::<H>());
 
-                if x.le(&current_key) {
-                    let merge_value = merge::<H>(&x_value, &current_node);
-                    self.store.insert_branch(
-                        parent_branch_key.clone(),
-                        BranchNode {
-                            left: (x_value, intersection_branch.clone()),
-                            right: (current_node, ChildKey::Leaf(current_key)),
-                        },
-                    )?;
+                if insertion {
+                    if x.le(&current_key) {
+                        let merge_value = merge::<H>(&x_value, &current_node);
+                        self.store.insert_branch(
+                            parent_branch_key.clone(),
+                            BranchNode {
+                                left: (x_value, intersection_branch.clone()),
+                                right: (current_node, ChildKey::Leaf(current_key)),
+                            },
+                        )?;
 
-                    Ok((merge_value, ChildKey::Branch(parent_branch_key)))
+                        Ok((merge_value, ChildKey::Branch(parent_branch_key)))
+                    } else {
+                        let merge_value = merge::<H>(&current_node, &x_value);
+                        self.store.insert_branch(
+                            parent_branch_key.clone(),
+                            BranchNode {
+                                left: (current_node, ChildKey::Leaf(current_key)),
+                                right: (x_value, intersection_branch.clone()),
+                            },
+                        )?;
+
+                        Ok((merge_value, ChildKey::Branch(parent_branch_key)))
+                    }
                 } else {
-                    let merge_value = merge::<H>(&current_node, &x_value);
-                    self.store.insert_branch(
-                        parent_branch_key.clone(),
-                        BranchNode {
-                            left: (current_node, ChildKey::Leaf(current_key)),
-                            right: (x_value, intersection_branch.clone()),
-                        },
-                    )?;
-
-                    Ok((merge_value, ChildKey::Branch(parent_branch_key)))
+                    self.store.remove_branch(&parent_branch_key)?;
+                    Ok((x_value, ChildKey::Leaf(x)))
                 }
             }
             ChildKey::Branch(key) => {
@@ -250,6 +254,7 @@ impl<H: Hasher + Default, V: Value + Debug, S: StoreReadOps<V> + StoreWriteOps<V
                             current_key,
                             parent_branch.left.1.clone(),
                             left_height,
+                            insertion,
                         )?;
 
                         let merge_value = merge::<H>(&new_child.0, &parent_branch.right.0);
@@ -270,6 +275,7 @@ impl<H: Hasher + Default, V: Value + Debug, S: StoreReadOps<V> + StoreWriteOps<V
                             current_key,
                             parent_branch.right.1.clone(),
                             right_height,
+                            insertion,
                         )?;
 
                         let merge_value = merge::<H>(&parent_branch.left.0, &new_child.0);
@@ -292,26 +298,31 @@ impl<H: Hasher + Default, V: Value + Debug, S: StoreReadOps<V> + StoreWriteOps<V
                         let parent_merged_value =
                             merge::<H>(&parent_branch.left.0, &parent_branch.right.0);
 
-                        if sub_key.is_right(current_height) {
-                            let merge_value = merge::<H>(&parent_merged_value, &current_node);
-                            self.store.insert_branch(
-                                parent_branch_key.clone(),
-                                BranchNode {
-                                    left: (parent_merged_value, ChildKey::Branch(key.clone())),
-                                    right: (current_node, ChildKey::Leaf(current_key)),
-                                },
-                            )?;
-                            Ok((merge_value, ChildKey::Branch(parent_branch_key)))
+                        if insertion {
+                            if sub_key.is_right(current_height) {
+                                let merge_value = merge::<H>(&parent_merged_value, &current_node);
+                                self.store.insert_branch(
+                                    parent_branch_key.clone(),
+                                    BranchNode {
+                                        left: (parent_merged_value, ChildKey::Branch(key.clone())),
+                                        right: (current_node, ChildKey::Leaf(current_key)),
+                                    },
+                                )?;
+                                Ok((merge_value, ChildKey::Branch(parent_branch_key)))
+                            } else {
+                                let merge_value = merge::<H>(&current_node, &parent_merged_value);
+                                self.store.insert_branch(
+                                    parent_branch_key.clone(),
+                                    BranchNode {
+                                        left: (current_node, ChildKey::Leaf(current_key)),
+                                        right: (parent_merged_value, ChildKey::Branch(key.clone())),
+                                    },
+                                )?;
+                                Ok((merge_value, ChildKey::Branch(parent_branch_key)))
+                            }
                         } else {
-                            let merge_value = merge::<H>(&current_node, &parent_merged_value);
-                            self.store.insert_branch(
-                                parent_branch_key.clone(),
-                                BranchNode {
-                                    left: (current_node, ChildKey::Leaf(current_key)),
-                                    right: (parent_merged_value, ChildKey::Branch(key.clone())),
-                                },
-                            )?;
-                            Ok((merge_value, ChildKey::Branch(parent_branch_key)))
+                            self.store.remove_branch(&parent_branch_key)?;
+                            Ok((parent_merged_value, ChildKey::Branch(key)))
                         }
                     }
                     (Some(a), Some(b)) => unreachable!("{a:#?} {b:#?}"),
@@ -328,11 +339,13 @@ impl<H: Hasher + Default, V: Value + Debug, S: StoreReadOps<V> + StoreWriteOps<V
         let node = MergeValue::from_h256(value.to_h256::<H>());
 
         // notice when value is zero the leaf is deleted, so we do not need to store it
-        if !node.is_zero() {
+        let insertion = if !node.is_zero() {
             self.store.insert_leaf(key, value)?;
+            true
         } else {
             self.store.remove_leaf(&key)?;
-        }
+            false
+        };
 
         // recompute the tree from top to bottom
         let x: Vec<_> = self
@@ -346,7 +359,8 @@ impl<H: Hasher + Default, V: Value + Debug, S: StoreReadOps<V> + StoreWriteOps<V
 
         let last_intersection_key = ChildKey::Branch(x[0].0.clone());
 
-        let (root_key, _) = self.recurse_tree(node, key, last_intersection_key, u8::MAX)?;
+        let (root_key, _) =
+            self.recurse_tree(node, key, last_intersection_key, u8::MAX, insertion)?;
 
         self.root = root_key.hash();
         Ok(&self.root)
@@ -364,16 +378,20 @@ impl<H: Hasher + Default, V: Value, S: StoreReadOps<V>> SparseMerkleTree<H, V, S
     }
 
     /// Generate merkle proof
-    pub fn insertion_merkle_proof(
+    #[allow(clippy::type_complexity)]
+    pub fn modify_root_proof(
         &self,
         mut keys: Vec<H256>,
-    ) -> Result<(
-        Vec<Side>,
-        Vec<MergeValue>,
-        Vec<MergeValue>,
-        Vec<MergeValue>,
-        bool,
-    )> {
+    ) -> Result<
+        Vec<(
+            Vec<Side>,
+            Vec<MergeValue>,
+            Vec<MergeValue>,
+            Vec<MergeValue>,
+            bool,
+            H256,
+        )>,
+    > {
         if keys.is_empty() {
             return Err(Error::EmptyKeys);
         }
@@ -381,150 +399,234 @@ impl<H: Hasher + Default, V: Value, S: StoreReadOps<V>> SparseMerkleTree<H, V, S
         // sort keys
         keys.sort_unstable();
 
-        let key = keys[0];
+        let mut final_vec = vec![];
 
-        // recompute the tree from top to bottom
-        let x: Vec<_> = self
-            .store()
-            .branches_map()
-            .iter()
-            .filter(|x| x.0.height == 255)
-            .collect();
+        for key in keys {
+            // recompute the tree from top to bottom
+            let x: Vec<_> = self
+                .store()
+                .branches_map()
+                .iter()
+                .filter(|x| x.0.height == 255)
+                .collect();
 
-        assert!(x.len() == 1);
+            assert!(x.len() == 1);
 
-        let mut branch_key = x[0].0.clone();
-        let mut proof = Vec::new();
+            let mut branch_key = x[0].0.clone();
+            let mut proof = Vec::new();
 
-        loop {
-            let branch = self.store.get_branch(&branch_key)?.unwrap();
+            loop {
+                let branch = self.store.get_branch(&branch_key)?.unwrap();
 
-            let left_inter_height = branch
-                .left
-                .1
-                .get_intersecting_height(key, branch_key.height);
+                let left_inter_height = branch
+                    .left
+                    .1
+                    .get_intersecting_height(key, branch_key.height);
 
-            let right_inter_height = branch
-                .right
-                .1
-                .get_intersecting_height(key, branch_key.height);
+                let right_inter_height = branch
+                    .right
+                    .1
+                    .get_intersecting_height(key, branch_key.height);
 
-            match (left_inter_height, right_inter_height) {
-                (None, Some(_)) => {
-                    proof.push((branch.left.1, Side::Left(branch.left.0)));
-                    match branch.right.1 {
-                        ChildKey::Leaf(x) => {
-                            assert!(x == key);
-                            break;
-                        }
-                        ChildKey::Branch(x) => {
-                            branch_key = x;
-                        }
-                    }
-                }
-                (Some(_), None) => {
-                    proof.push((branch.right.1, Side::Right(branch.right.0)));
-                    match branch.left.1 {
-                        ChildKey::Leaf(x) => {
-                            assert!(x == key);
-                            break;
-                        }
-                        ChildKey::Branch(x) => {
-                            branch_key = x;
+                match (left_inter_height, right_inter_height) {
+                    (None, Some(_)) => {
+                        proof.push((branch.left.1, Side::Left(branch.left.0)));
+                        match branch.right.1 {
+                            ChildKey::Leaf(x) => {
+                                assert!(x == key);
+                                break;
+                            }
+                            ChildKey::Branch(x) => {
+                                branch_key = x;
+                            }
                         }
                     }
+                    (Some(_), None) => {
+                        proof.push((branch.right.1, Side::Right(branch.right.0)));
+                        match branch.left.1 {
+                            ChildKey::Leaf(x) => {
+                                assert!(x == key);
+                                break;
+                            }
+                            ChildKey::Branch(x) => {
+                                branch_key = x;
+                            }
+                        }
+                    }
+                    (Some(x), Some(y)) => unreachable!("{x:#?} {y:#?} impossible"),
+                    (None, None) => unreachable!("also impossible"),
                 }
-                (Some(x), Some(y)) => unreachable!("{x:#?} {y:#?} impossible"),
-                (None, None) => unreachable!("also impossible"),
             }
-        }
 
-        let mut starting_side = proof.pop().unwrap();
-        let started_left_side = matches!(starting_side.1, Side::Left(_));
+            let mut starting_side = proof.pop().unwrap();
+            let started_left_side = matches!(starting_side.1, Side::Left(_));
 
-        let mut left_vec = vec![];
-        let mut right_vec = vec![];
-        let mut continuing_side: Vec<MergeValue> = vec![];
+            let mut left_vec = vec![];
+            let mut right_vec = vec![];
+            let mut continuing_side: Vec<MergeValue> = vec![];
 
-        loop {
-            match &starting_side.0 {
-                ChildKey::Leaf(x) => {
-                    match starting_side.1 {
-                        Side::Left(_) => {
-                            left_vec.push(MergeValue::from_h256(*x));
+            loop {
+                match &starting_side.0 {
+                    ChildKey::Leaf(x) => {
+                        match starting_side.1 {
+                            Side::Left(_) => {
+                                left_vec.push(MergeValue::from_h256(*x));
+                            }
+                            Side::Right(_) => {
+                                right_vec.push(MergeValue::from_h256(*x));
+                            }
                         }
-                        Side::Right(_) => {
-                            right_vec.push(MergeValue::from_h256(*x));
+                        break;
+                    }
+                    ChildKey::Branch(bkey) => {
+                        let next_child = self.store().get_branch(bkey)?.unwrap();
+                        match &starting_side.1 {
+                            Side::Left(_) => {
+                                left_vec.push(next_child.left.0);
+                                starting_side =
+                                    (next_child.right.1, Side::Left(next_child.right.0));
+                            }
+                            Side::Right(_) => {
+                                right_vec.push(next_child.right.0);
+                                starting_side = (next_child.left.1, Side::Right(next_child.left.0));
+                            }
                         }
                     }
+                }
+            }
+
+            while let Some(thing) = proof.pop() {
+                if (starting_side.1).is_same_side(&thing.1) {
+                    continuing_side.push(thing.1.merge_value());
+                } else {
+                    proof.push(thing);
                     break;
                 }
-                ChildKey::Branch(bkey) => {
-                    let next_child = self.store().get_branch(bkey)?.unwrap();
-                    match &starting_side.1 {
-                        Side::Left(_) => {
-                            left_vec.push(next_child.left.0);
-                            starting_side = (next_child.right.1, Side::Left(next_child.right.0));
+            }
+
+            let mut other_side = proof.pop().unwrap();
+
+            loop {
+                match &other_side.0 {
+                    ChildKey::Leaf(x) => {
+                        match other_side.1 {
+                            Side::Left(_) => {
+                                left_vec.push(MergeValue::from_h256(*x));
+                            }
+                            Side::Right(_) => {
+                                right_vec.push(MergeValue::from_h256(*x));
+                            }
                         }
-                        Side::Right(_) => {
-                            right_vec.push(next_child.right.0);
-                            starting_side = (next_child.left.1, Side::Right(next_child.left.0));
+                        break;
+                    }
+                    ChildKey::Branch(bkey) => {
+                        let next_child = self.store().get_branch(bkey)?.unwrap();
+                        match &other_side.1 {
+                            Side::Left(_) => {
+                                left_vec.push(next_child.left.0);
+                                other_side = (next_child.right.1, Side::Left(next_child.right.0));
+                            }
+                            Side::Right(_) => {
+                                right_vec.push(next_child.right.0);
+                                other_side = (next_child.left.1, Side::Right(next_child.left.0));
+                            }
                         }
                     }
                 }
             }
+
+            left_vec.reverse();
+            right_vec.reverse();
+            continuing_side.reverse();
+
+            final_vec.push((
+                proof.iter().map(|x| x.1.clone()).rev().collect::<Vec<_>>(),
+                left_vec,
+                continuing_side,
+                right_vec,
+                started_left_side,
+                key,
+            ))
         }
 
-        while let Some(thing) = proof.pop() {
-            if (starting_side.1).is_same_side(&thing.1) {
-                continuing_side.push(thing.1.merge_value());
-            } else {
-                proof.push(thing);
-                break;
-            }
+        Ok(final_vec)
+    }
+
+    /// Generate merkle proof
+    #[allow(clippy::type_complexity)]
+    pub fn member_proof(&self, mut keys: Vec<H256>) -> Result<Vec<(Vec<Side>, H256)>> {
+        if keys.is_empty() {
+            return Err(Error::EmptyKeys);
         }
 
-        let mut other_side = proof.pop().unwrap();
+        // sort keys
+        keys.sort_unstable();
 
-        loop {
-            match &other_side.0 {
-                ChildKey::Leaf(x) => {
-                    match other_side.1 {
-                        Side::Left(_) => {
-                            left_vec.push(MergeValue::from_h256(*x));
-                        }
-                        Side::Right(_) => {
-                            right_vec.push(MergeValue::from_h256(*x));
+        let mut final_vec = vec![];
+
+        for key in keys {
+            // recompute the tree from top to bottom
+            let x: Vec<_> = self
+                .store()
+                .branches_map()
+                .iter()
+                .filter(|x| x.0.height == 255)
+                .collect();
+
+            assert!(x.len() == 1);
+
+            let mut branch_key = x[0].0.clone();
+            let mut proof = Vec::new();
+
+            loop {
+                let branch = self.store.get_branch(&branch_key)?.unwrap();
+
+                let left_inter_height = branch
+                    .left
+                    .1
+                    .get_intersecting_height(key, branch_key.height);
+
+                let right_inter_height = branch
+                    .right
+                    .1
+                    .get_intersecting_height(key, branch_key.height);
+
+                match (left_inter_height, right_inter_height) {
+                    (None, Some(_)) => {
+                        proof.push((branch.left.1, Side::Left(branch.left.0)));
+                        match branch.right.1 {
+                            ChildKey::Leaf(x) => {
+                                assert!(x == key);
+                                break;
+                            }
+                            ChildKey::Branch(x) => {
+                                branch_key = x;
+                            }
                         }
                     }
-                    break;
-                }
-                ChildKey::Branch(bkey) => {
-                    let next_child = self.store().get_branch(bkey)?.unwrap();
-                    match &other_side.1 {
-                        Side::Left(_) => {
-                            left_vec.push(next_child.left.0);
-                            other_side = (next_child.right.1, Side::Left(next_child.right.0));
-                        }
-                        Side::Right(_) => {
-                            right_vec.push(next_child.right.0);
-                            other_side = (next_child.left.1, Side::Right(next_child.left.0));
+                    (Some(_), None) => {
+                        proof.push((branch.right.1, Side::Right(branch.right.0)));
+                        match branch.left.1 {
+                            ChildKey::Leaf(x) => {
+                                assert!(x == key);
+                                break;
+                            }
+                            ChildKey::Branch(x) => {
+                                branch_key = x;
+                            }
                         }
                     }
+                    (Some(x), Some(y)) => unreachable!("{x:#?} {y:#?} impossible"),
+                    (None, None) => unreachable!("also impossible"),
                 }
             }
+
+            final_vec.push((
+                proof.iter().map(|x| x.1.clone()).rev().collect::<Vec<_>>(),
+                key,
+            ))
         }
 
-        left_vec.reverse();
-        right_vec.reverse();
-        continuing_side.reverse();
-
-        Ok((
-            proof.iter().map(|x| x.1.clone()).rev().collect::<Vec<_>>(),
-            left_vec,
-            continuing_side,
-            right_vec,
-            started_left_side,
-        ))
+        Ok(final_vec)
     }
 }
