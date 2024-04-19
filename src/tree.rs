@@ -41,20 +41,34 @@ pub enum ChildKey {
     Branch(BranchKey),
 }
 
+#[derive(Debug, Eq, PartialEq, Clone)]
+pub enum Match {
+    Exact,
+    NoMatch,
+}
+
 impl ChildKey {
-    fn get_intersecting_height(&self, other_key: H256, max_height: u8) -> Option<u8> {
+    fn get_intersecting_height(
+        &self,
+        other_key: H256,
+        max_height: u8,
+    ) -> core::result::Result<u8, Match> {
         match self {
             ChildKey::Leaf(key) => {
+                if key == &other_key {
+                    return Err(Match::Exact);
+                }
+
                 for i in 0..max_height {
                     let parent_key_leaf = key.parent_path_by_height(i);
 
                     let other_parent_key = other_key.parent_path_by_height(i);
 
                     if parent_key_leaf == other_parent_key {
-                        return Some(i);
+                        return Ok(i);
                     }
                 }
-                None
+                Err(Match::NoMatch)
             }
             ChildKey::Branch(key) => {
                 for i in 1..max_height {
@@ -70,10 +84,10 @@ impl ChildKey {
                     let other_parent_key = other_key.parent_path_by_height(i);
 
                     if parent_key_leaf == other_parent_key {
-                        return Some(i);
+                        return Ok(i);
                     }
                 }
-                None
+                Err(Match::NoMatch)
             }
         }
     }
@@ -198,41 +212,51 @@ impl<H: Hasher + Default, V: Value + Debug, S: StoreReadOps<V> + StoreWriteOps<V
         insertion: bool,
     ) -> Result<(MergeValue, ChildKey)> {
         match intersection_branch {
-            ChildKey::Leaf(x) => {
+            ChildKey::Leaf(x) if insertion => {
                 let parent_key = x.parent_path_by_height(current_height);
                 let parent_branch_key = BranchKey::new(current_height, parent_key);
+
+                println!("X IS {:#?}", x);
 
                 let x_value =
                     MergeValue::from_h256(self.store.get_leaf(&x)?.unwrap().to_h256::<H>());
 
-                if insertion {
-                    if x.le(&current_key) {
-                        let merge_value = merge::<H>(&x_value, &current_node);
-                        self.store.insert_branch(
-                            parent_branch_key.clone(),
-                            BranchNode {
-                                left: (x_value, intersection_branch.clone()),
-                                right: (current_node, ChildKey::Leaf(current_key)),
-                            },
-                        )?;
+                if x.le(&current_key) {
+                    let merge_value = merge::<H>(&x_value, &current_node);
+                    self.store.insert_branch(
+                        parent_branch_key.clone(),
+                        BranchNode {
+                            left: (x_value, intersection_branch.clone()),
+                            right: (current_node, ChildKey::Leaf(current_key)),
+                        },
+                    )?;
 
-                        Ok((merge_value, ChildKey::Branch(parent_branch_key)))
-                    } else {
-                        let merge_value = merge::<H>(&current_node, &x_value);
-                        self.store.insert_branch(
-                            parent_branch_key.clone(),
-                            BranchNode {
-                                left: (current_node, ChildKey::Leaf(current_key)),
-                                right: (x_value, intersection_branch.clone()),
-                            },
-                        )?;
-
-                        Ok((merge_value, ChildKey::Branch(parent_branch_key)))
-                    }
+                    Ok((merge_value, ChildKey::Branch(parent_branch_key)))
                 } else {
-                    self.store.remove_branch(&parent_branch_key)?;
-                    Ok((x_value, ChildKey::Leaf(x)))
+                    let merge_value = merge::<H>(&current_node, &x_value);
+                    self.store.insert_branch(
+                        parent_branch_key.clone(),
+                        BranchNode {
+                            left: (current_node, ChildKey::Leaf(current_key)),
+                            right: (x_value, intersection_branch.clone()),
+                        },
+                    )?;
+
+                    Ok((merge_value, ChildKey::Branch(parent_branch_key)))
                 }
+            }
+
+            ChildKey::Leaf(x) => {
+                let parent_key = x.parent_path_by_height(current_height);
+                let parent_branch_key = BranchKey::new(current_height, parent_key);
+
+                println!("X IS {:#?}", x);
+
+                let x_value =
+                    MergeValue::from_h256(self.store.get_leaf(&x)?.unwrap().to_h256::<H>());
+
+                self.store.remove_branch(&parent_branch_key)?;
+                Ok((x_value, ChildKey::Leaf(x)))
             }
             ChildKey::Branch(key) => {
                 let parent_branch = self.store.get_branch(&key)?.unwrap();
@@ -247,8 +271,67 @@ impl<H: Hasher + Default, V: Value + Debug, S: StoreReadOps<V> + StoreWriteOps<V
                     .1
                     .get_intersecting_height(current_key, current_height);
 
+                println!(
+                    "BOTH ARE {:#?} {:#?}",
+                    left_inter_height, right_inter_height
+                );
+
                 match (left_inter_height, right_inter_height) {
-                    (Some(left_height), None) => {
+                    (Err(Match::Exact), _) if insertion => {
+                        let new_child = self.recurse_tree(
+                            current_node,
+                            current_key,
+                            parent_branch.left.1.clone(),
+                            0,
+                            insertion,
+                        )?;
+
+                        let merge_value = merge::<H>(&new_child.0, &parent_branch.right.0);
+
+                        self.store.insert_branch(
+                            key.clone(),
+                            BranchNode {
+                                left: new_child,
+                                right: parent_branch.right,
+                            },
+                        )?;
+
+                        Ok((merge_value, ChildKey::Branch(key)))
+                    }
+
+                    (_, Err(Match::Exact)) if insertion => {
+                        let new_child = self.recurse_tree(
+                            current_node,
+                            current_key,
+                            parent_branch.right.1.clone(),
+                            0,
+                            insertion,
+                        )?;
+
+                        let merge_value = merge::<H>(&parent_branch.left.0, &new_child.0);
+
+                        self.store.insert_branch(
+                            key.clone(),
+                            BranchNode {
+                                left: parent_branch.left,
+                                right: new_child,
+                            },
+                        )?;
+
+                        Ok((merge_value, ChildKey::Branch(key)))
+                    }
+
+                    (Err(Match::Exact), _) => {
+                        self.store.remove_branch(&key)?;
+                        Ok(parent_branch.right)
+                    }
+
+                    (_, Err(Match::Exact)) => {
+                        self.store.remove_branch(&key)?;
+                        Ok(parent_branch.left)
+                    }
+
+                    (Ok(left_height), Err(Match::NoMatch)) => {
                         let new_child = self.recurse_tree(
                             current_node,
                             current_key,
@@ -269,7 +352,8 @@ impl<H: Hasher + Default, V: Value + Debug, S: StoreReadOps<V> + StoreWriteOps<V
 
                         Ok((merge_value, ChildKey::Branch(key)))
                     }
-                    (None, Some(right_height)) => {
+
+                    (Err(Match::NoMatch), Ok(right_height)) => {
                         let new_child = self.recurse_tree(
                             current_node,
                             current_key,
@@ -290,7 +374,9 @@ impl<H: Hasher + Default, V: Value + Debug, S: StoreReadOps<V> + StoreWriteOps<V
 
                         Ok((merge_value, ChildKey::Branch(key)))
                     }
-                    (None, None) => {
+
+                    (Err(Match::NoMatch), Err(Match::NoMatch)) => {
+                        assert!(insertion);
                         let parent_key = current_key.parent_path_by_height(current_height);
                         let parent_branch_key = BranchKey::new(current_height, parent_key);
                         let sub_key = current_key.parent_path_by_height(current_height - 1);
@@ -298,34 +384,30 @@ impl<H: Hasher + Default, V: Value + Debug, S: StoreReadOps<V> + StoreWriteOps<V
                         let parent_merged_value =
                             merge::<H>(&parent_branch.left.0, &parent_branch.right.0);
 
-                        if insertion {
-                            if sub_key.is_right(current_height) {
-                                let merge_value = merge::<H>(&parent_merged_value, &current_node);
-                                self.store.insert_branch(
-                                    parent_branch_key.clone(),
-                                    BranchNode {
-                                        left: (parent_merged_value, ChildKey::Branch(key.clone())),
-                                        right: (current_node, ChildKey::Leaf(current_key)),
-                                    },
-                                )?;
-                                Ok((merge_value, ChildKey::Branch(parent_branch_key)))
-                            } else {
-                                let merge_value = merge::<H>(&current_node, &parent_merged_value);
-                                self.store.insert_branch(
-                                    parent_branch_key.clone(),
-                                    BranchNode {
-                                        left: (current_node, ChildKey::Leaf(current_key)),
-                                        right: (parent_merged_value, ChildKey::Branch(key.clone())),
-                                    },
-                                )?;
-                                Ok((merge_value, ChildKey::Branch(parent_branch_key)))
-                            }
+                        if sub_key.is_right(current_height) {
+                            let merge_value = merge::<H>(&parent_merged_value, &current_node);
+                            self.store.insert_branch(
+                                parent_branch_key.clone(),
+                                BranchNode {
+                                    left: (parent_merged_value, ChildKey::Branch(key.clone())),
+                                    right: (current_node, ChildKey::Leaf(current_key)),
+                                },
+                            )?;
+                            Ok((merge_value, ChildKey::Branch(parent_branch_key)))
                         } else {
-                            self.store.remove_branch(&parent_branch_key)?;
-                            Ok((parent_merged_value, ChildKey::Branch(key)))
+                            let merge_value = merge::<H>(&current_node, &parent_merged_value);
+                            self.store.insert_branch(
+                                parent_branch_key.clone(),
+                                BranchNode {
+                                    left: (current_node, ChildKey::Leaf(current_key)),
+                                    right: (parent_merged_value, ChildKey::Branch(key.clone())),
+                                },
+                            )?;
+                            Ok((merge_value, ChildKey::Branch(parent_branch_key)))
                         }
                     }
-                    (Some(a), Some(b)) => unreachable!("{a:#?} {b:#?}"),
+
+                    (Ok(a), Ok(b)) => unreachable!("{a:#?} {b:#?}"),
                 }
             }
         }
@@ -333,18 +415,16 @@ impl<H: Hasher + Default, V: Value + Debug, S: StoreReadOps<V> + StoreWriteOps<V
 
     /// Update a leaf, return new merkle root
     /// set to zero value to delete a key
-    pub fn update(&mut self, key: H256, value: V) -> Result<&H256> {
+    pub fn update(&mut self, key: H256, value: V, insertion: bool) -> Result<&H256> {
         // compute and store new leaf
 
         let node = MergeValue::from_h256(value.to_h256::<H>());
 
         // notice when value is zero the leaf is deleted, so we do not need to store it
-        let insertion = if !node.is_zero() {
+        if insertion {
             self.store.insert_leaf(key, value)?;
-            true
         } else {
             self.store.remove_leaf(&key)?;
-            false
         };
 
         // recompute the tree from top to bottom
@@ -429,32 +509,60 @@ impl<H: Hasher + Default, V: Value, S: StoreReadOps<V>> SparseMerkleTree<H, V, S
                     .get_intersecting_height(key, branch_key.height);
 
                 match (left_inter_height, right_inter_height) {
-                    (None, Some(_)) => {
-                        proof.push((branch.left.1, Side::Left(branch.left.0)));
-                        match branch.right.1 {
-                            ChildKey::Leaf(x) => {
-                                assert!(x == key);
-                                break;
-                            }
-                            ChildKey::Branch(x) => {
-                                branch_key = x;
-                            }
-                        }
-                    }
-                    (Some(_), None) => {
+                    (Err(Match::Exact), _) => {
                         proof.push((branch.right.1, Side::Right(branch.right.0)));
                         match branch.left.1 {
                             ChildKey::Leaf(x) => {
                                 assert!(x == key);
                                 break;
                             }
+                            ChildKey::Branch(_) => {
+                                unreachable!()
+                            }
+                        }
+                    }
+
+                    (_, Err(Match::Exact)) => {
+                        proof.push((branch.left.1, Side::Left(branch.left.0)));
+                        match branch.right.1 {
+                            ChildKey::Leaf(x) => {
+                                assert!(x == key);
+                                break;
+                            }
+                            ChildKey::Branch(_) => {
+                                unreachable!()
+                            }
+                        }
+                    }
+                    (Ok(_), Err(Match::NoMatch)) => {
+                        proof.push((branch.right.1, Side::Right(branch.right.0)));
+                        match branch.left.1 {
+                            ChildKey::Leaf(_) => {
+                                unreachable!()
+                            }
                             ChildKey::Branch(x) => {
                                 branch_key = x;
                             }
                         }
                     }
-                    (Some(x), Some(y)) => unreachable!("{x:#?} {y:#?} impossible"),
-                    (None, None) => unreachable!("also impossible"),
+                    (Err(Match::NoMatch), Ok(_)) => {
+                        proof.push((branch.left.1, Side::Left(branch.left.0)));
+                        match branch.right.1 {
+                            ChildKey::Leaf(_) => {
+                                unreachable!()
+                            }
+                            ChildKey::Branch(x) => {
+                                branch_key = x;
+                            }
+                        }
+                    }
+                    (Ok(x), Ok(y)) => {
+                        unreachable!("{x:#?} {y:#?} impossible")
+                    }
+
+                    (Err(Match::NoMatch), Err(Match::NoMatch)) => {
+                        unreachable!("also impossible")
+                    }
                 }
             }
 
@@ -591,19 +699,7 @@ impl<H: Hasher + Default, V: Value, S: StoreReadOps<V>> SparseMerkleTree<H, V, S
                     .get_intersecting_height(key, branch_key.height);
 
                 match (left_inter_height, right_inter_height) {
-                    (None, Some(_)) => {
-                        proof.push((branch.left.1, Side::Left(branch.left.0)));
-                        match branch.right.1 {
-                            ChildKey::Leaf(x) => {
-                                assert!(x == key);
-                                break;
-                            }
-                            ChildKey::Branch(x) => {
-                                branch_key = x;
-                            }
-                        }
-                    }
-                    (Some(_), None) => {
+                    (Err(Match::Exact), _) => {
                         proof.push((branch.right.1, Side::Right(branch.right.0)));
                         match branch.left.1 {
                             ChildKey::Leaf(x) => {
@@ -615,8 +711,50 @@ impl<H: Hasher + Default, V: Value, S: StoreReadOps<V>> SparseMerkleTree<H, V, S
                             }
                         }
                     }
-                    (Some(x), Some(y)) => unreachable!("{x:#?} {y:#?} impossible"),
-                    (None, None) => unreachable!("also impossible"),
+
+                    (_, Err(Match::Exact)) => {
+                        proof.push((branch.left.1, Side::Left(branch.left.0)));
+                        match branch.right.1 {
+                            ChildKey::Leaf(x) => {
+                                assert!(x == key);
+                                break;
+                            }
+                            ChildKey::Branch(x) => {
+                                branch_key = x;
+                            }
+                        }
+                    }
+                    (Ok(_), Err(Match::NoMatch)) => {
+                        proof.push((branch.right.1, Side::Right(branch.right.0)));
+                        match branch.left.1 {
+                            ChildKey::Leaf(x) => {
+                                assert!(x == key);
+                                break;
+                            }
+                            ChildKey::Branch(x) => {
+                                branch_key = x;
+                            }
+                        }
+                    }
+                    (Err(Match::NoMatch), Ok(_)) => {
+                        proof.push((branch.left.1, Side::Left(branch.left.0)));
+                        match branch.right.1 {
+                            ChildKey::Leaf(x) => {
+                                assert!(x == key);
+                                break;
+                            }
+                            ChildKey::Branch(x) => {
+                                branch_key = x;
+                            }
+                        }
+                    }
+                    (Ok(x), Ok(y)) => {
+                        unreachable!("{x:#?} {y:#?} impossible")
+                    }
+
+                    (Err(Match::NoMatch), Err(Match::NoMatch)) => {
+                        unreachable!("also impossible")
+                    }
                 }
             }
 
