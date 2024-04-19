@@ -537,7 +537,6 @@ impl<H: Hasher + Default, V: Value, S: StoreReadOps<V>> SparseMerkleTree<H, V, S
 
             left_vec.reverse();
             right_vec.reverse();
-            continuing_side.reverse();
 
             final_vec.push((
                 proof.iter().map(|x| x.1.clone()).rev().collect::<Vec<_>>(),

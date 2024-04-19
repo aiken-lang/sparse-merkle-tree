@@ -7,3 +7,5 @@ build/
 
 # Added by cargo
 /target
+
+blocks.json

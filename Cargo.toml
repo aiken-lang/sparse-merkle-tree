@@ -10,3 +10,5 @@ cryptoxide = "0.4.4"
 hex = "0.4.3"
 hexlit = "0.5.5"
 itertools = "0.12.1"
+serde = { version = "1.0.198", features = ["derive"] }
+serde_json = "1.0.116"

@@ -1,11 +1,12 @@
 use hexlit::hex;
+use itertools::Itertools;
 
 use crate::{
     blake2b::Blake2bHasher,
     default_store::DefaultStore,
     h256::H256,
     merge::{merge, MergeValue},
-    traits::Value,
+    traits::{StoreReadOps, Value},
     tree::SparseMerkleTree,
 };
 
@@ -156,6 +157,166 @@ fn my_test() {
         let mut combined_hash = merge::<Blake2bHasher>(&left_hash, &with_item_hash);
 
         for val in proofs {
+            match val {
+                crate::merkle_proof::Side::Left(x) => {
+                    combined_hash = merge::<Blake2bHasher>(&x, &combined_hash);
+                }
+                crate::merkle_proof::Side::Right(x) => {
+                    combined_hash = merge::<Blake2bHasher>(&combined_hash, &x);
+                }
+            }
+        }
+
+        assert_eq!(*tree.root(), combined_hash.hash());
+    }
+}
+
+#[test]
+fn fortuna_root_test() {
+    #[derive(serde::Deserialize)]
+    struct BlockData {
+        current_hash: String,
+    }
+
+    let contents = std::fs::read("blocks.json").expect("Unable to read file");
+
+    let blocks: Vec<BlockData> = serde_json::from_slice(&contents).expect("Unable to parse JSON");
+
+    let hashes = blocks
+        .into_iter()
+        .map(|x| x.current_hash)
+        .collect::<Vec<_>>();
+
+    let mut tree = SMT::default();
+
+    for hash in &hashes {
+        let hash_bytes = hex::decode(hash).expect("Unable to decode hash");
+        let first_25 = &hash_bytes[0..25];
+        let last_7 = &hash_bytes[25..32];
+
+        let key: [u8; 32] = last_7
+            .iter()
+            .chain(first_25.iter())
+            .copied()
+            .collect_vec()
+            .try_into()
+            .unwrap();
+        let value = key;
+
+        let key: H256 = { key.into() };
+        let value: H256 = { value.into() };
+        tree.update(key, value).expect("update");
+    }
+
+    println!(
+        "Leaves {:#?}",
+        tree.store()
+            .leaves_map()
+            .iter()
+            .sorted_by(|a, b| { a.0.cmp(b.0) })
+            .collect::<Vec<_>>()
+    );
+
+    println!(
+        "Branches {:#?}",
+        tree.store()
+            .branches_map()
+            .iter()
+            .sorted_by(|a, b| { a.0.cmp(b.0) })
+            .collect::<Vec<_>>()
+    );
+
+    let (proofs, mut left_vec, continuing_side, mut right_vec, started_left_side, key) = tree
+        .modify_root_proof(vec![hex!(
+            "c11ba1980eae54000000000000420dc24ab8c31f2c6ca2a791af8eaeb855a52b"
+        )
+        .into()])
+        .unwrap()
+        .pop()
+        .unwrap();
+
+    println!("PROOFS {:#?}", proofs);
+    println!("LEFT_VEC {:#?}", left_vec);
+    println!("CONTINUING_SIDE {:#?}", continuing_side);
+    println!("RIGHT_VEC {:#?}", right_vec);
+    println!("STARTED_LEFT_SIDE {:#?}", started_left_side);
+    println!("KEY {:#?}", key);
+
+    if started_left_side {
+        let mut left_hash = left_vec.remove(0);
+
+        // Need to do a leaf hash
+        left_hash = MergeValue::from_h256(left_hash.hash().to_h256::<Blake2bHasher>());
+
+        for val in left_vec {
+            left_hash = merge::<Blake2bHasher>(&val, &left_hash);
+        }
+
+        let mut right_hash = right_vec.remove(0);
+
+        // Need to do a leaf hash
+        right_hash = MergeValue::from_h256(right_hash.hash().to_h256::<Blake2bHasher>());
+        for val in right_vec {
+            right_hash = merge::<Blake2bHasher>(&right_hash, &val);
+        }
+
+        let mut with_item_hash = merge::<Blake2bHasher>(
+            &left_hash,
+            &MergeValue::from_h256(key.to_h256::<Blake2bHasher>()),
+        );
+
+        for val in continuing_side {
+            with_item_hash = merge::<Blake2bHasher>(&val, &with_item_hash);
+        }
+
+        let mut combined_hash = merge::<Blake2bHasher>(&with_item_hash, &right_hash);
+
+        for (i, val) in proofs.into_iter().enumerate() {
+            println!("I IS {}", i);
+
+            match val {
+                crate::merkle_proof::Side::Left(x) => {
+                    combined_hash = merge::<Blake2bHasher>(&x, &combined_hash);
+                }
+                crate::merkle_proof::Side::Right(x) => {
+                    combined_hash = merge::<Blake2bHasher>(&combined_hash, &x);
+                }
+            }
+        }
+
+        assert_eq!(*tree.root(), combined_hash.hash());
+    } else {
+        let mut right_hash = right_vec.remove(0);
+
+        // Need to do a leaf hash
+        right_hash = MergeValue::from_h256(right_hash.hash().to_h256::<Blake2bHasher>());
+
+        for val in right_vec {
+            right_hash = merge::<Blake2bHasher>(&right_hash, &val);
+        }
+
+        let mut left_hash = left_vec.remove(0);
+
+        // Need to do a leaf hash
+        left_hash = MergeValue::from_h256(left_hash.hash().to_h256::<Blake2bHasher>());
+        for val in left_vec {
+            left_hash = merge::<Blake2bHasher>(&val, &left_hash);
+        }
+
+        let mut with_item_hash = merge::<Blake2bHasher>(
+            &MergeValue::from_h256(key.to_h256::<Blake2bHasher>()),
+            &right_hash,
+        );
+
+        for val in continuing_side {
+            with_item_hash = merge::<Blake2bHasher>(&with_item_hash, &val);
+        }
+
+        let mut combined_hash = merge::<Blake2bHasher>(&left_hash, &with_item_hash);
+
+        for (i, val) in proofs.into_iter().enumerate() {
+            println!("I IS {}", i);
+
             match val {
                 crate::merkle_proof::Side::Left(x) => {
                     combined_hash = merge::<Blake2bHasher>(&x, &combined_hash);
