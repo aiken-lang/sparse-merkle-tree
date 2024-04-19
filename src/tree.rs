@@ -216,8 +216,6 @@ impl<H: Hasher + Default, V: Value + Debug, S: StoreReadOps<V> + StoreWriteOps<V
                 let parent_key = x.parent_path_by_height(current_height);
                 let parent_branch_key = BranchKey::new(current_height, parent_key);
 
-                println!("X IS {:#?}", x);
-
                 let x_value =
                     MergeValue::from_h256(self.store.get_leaf(&x)?.unwrap().to_h256::<H>());
 
@@ -250,8 +248,6 @@ impl<H: Hasher + Default, V: Value + Debug, S: StoreReadOps<V> + StoreWriteOps<V
                 let parent_key = x.parent_path_by_height(current_height);
                 let parent_branch_key = BranchKey::new(current_height, parent_key);
 
-                println!("X IS {:#?}", x);
-
                 let x_value =
                     MergeValue::from_h256(self.store.get_leaf(&x)?.unwrap().to_h256::<H>());
 
@@ -270,11 +266,6 @@ impl<H: Hasher + Default, V: Value + Debug, S: StoreReadOps<V> + StoreWriteOps<V
                     .right
                     .1
                     .get_intersecting_height(current_key, current_height);
-
-                println!(
-                    "BOTH ARE {:#?} {:#?}",
-                    left_inter_height, right_inter_height
-                );
 
                 match (left_inter_height, right_inter_height) {
                     (Err(Match::Exact), _) if insertion => {
