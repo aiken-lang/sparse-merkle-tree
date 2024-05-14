@@ -1,6 +1,6 @@
-use std::{cmp::Ordering, fmt::Debug, io::Read};
+use std::{cmp::Ordering, fmt::Debug};
 
-use bitvec::{array::BitArray, order::Msb0, slice::BitSlice, vec::BitVec};
+use bitvec::{array::BitArray, order::Msb0, vec::BitVec};
 
 /// Represent 256 bits
 #[derive(Eq, PartialEq, Default, Hash, Clone, Copy)]

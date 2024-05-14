@@ -6,7 +6,7 @@ use crate::{
     default_store::DefaultStore,
     h256::H256,
     merge::{merge, MergeValue},
-    traits::{StoreReadOps, Value},
+    traits::Value,
     tree::SparseMerkleTree,
 };
 
