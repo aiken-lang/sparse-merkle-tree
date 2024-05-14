@@ -1,4 +1,6 @@
-use std::{cmp::Ordering, fmt::Debug};
+use std::{cmp::Ordering, fmt::Debug, io::Read};
+
+use bitvec::{array::BitArray, order::Msb0, slice::BitSlice, vec::BitVec};
 
 /// Represent 256 bits
 #[derive(Eq, PartialEq, Default, Hash, Clone, Copy)]
@@ -51,14 +53,17 @@ impl H256 {
     }
 
     #[inline]
-    pub fn is_right(&self, height: u8) -> bool {
-        let byte_pos = height / BYTE_SIZE;
-        let bit = self.0[31 - byte_pos as usize] & 1;
+    pub fn is_right(&self) -> bool {
+        let bit = self.0[31] & 1;
         bit != 0
     }
 
     pub fn as_slice(&self) -> &[u8] {
         &self.0[..]
+    }
+
+    pub fn as_mut_slice(&mut self) -> &mut [u8] {
+        &mut self.0[..]
     }
 
     /// Treat H256 as a path in a tree
@@ -79,51 +84,18 @@ impl H256 {
             H256::zero()
         } else {
             let height = height + 1;
-            let mut target = H256::zero();
+            let mut x = *self;
 
-            let end_byte = 32 - (height / BYTE_SIZE) as usize;
+            let x: &mut BitVec<_, Msb0> = &mut BitVec::from_slice(x.as_mut_slice());
 
-            // copy bytes
-            target.0[0..end_byte].copy_from_slice(&self.0[0..end_byte]);
+            x.shift_right(height.into());
 
-            // reset remain bytes
-            let remain = u32::from(height % BYTE_SIZE);
+            let target: BitArray<[u8; 32], _> = x.as_bitslice().try_into().unwrap();
 
-            if remain > 0 {
-                let x = target.0[end_byte - 1] / 2u8.pow(remain);
-                target.0[end_byte - 1] = x;
-            }
+            let y: [u8; 32] = target.data;
 
-            target
+            y.into()
         }
-    }
-
-    /// Treat H256 as a path in a tree
-    /// return parent_path of self
-    pub fn parent_path(&self, height: u8) -> Self {
-        if height == core::u8::MAX {
-            H256::zero()
-        } else {
-            self.copy_bits(height + 1)
-        }
-    }
-
-    /// Copy bits and return a new H256
-    pub fn copy_bits(&self, start: u8) -> Self {
-        let mut target = H256::zero();
-
-        let end_byte = 32 - (start / BYTE_SIZE) as usize;
-
-        // copy bytes
-        target.0[0..end_byte].copy_from_slice(&self.0[0..end_byte]);
-
-        // reset remain bytes
-        let remain = start % BYTE_SIZE;
-        if remain > 0 {
-            target.0[end_byte - 1] >>= 1
-        }
-
-        target
     }
 }
 

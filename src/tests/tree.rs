@@ -69,6 +69,7 @@ fn test_proof(mut tree: SMT, hex_key: [u8; 32]) {
         }
 
         assert_eq!(*tree.root(), combined_hash.hash());
+
         tree.update(key, key, false).unwrap();
 
         assert_eq!(*tree.root(), other_combined_hash.hash());
@@ -225,26 +226,38 @@ fn fortuna_root_test() {
         tree.update(key, value, true).expect("update");
     }
 
-    println!(
-        "Leaves {:#?}",
-        tree.store()
-            .leaves_map()
-            .iter()
-            .sorted_by(|a, b| { a.0.cmp(b.0) })
-            .collect::<Vec<_>>()
+    test_proof(
+        tree,
+        hex!("c11ba1980eae54000000000000420dc24ab8c31f2c6ca2a791af8eaeb855a52b"),
     );
+}
 
-    println!(
-        "Branches {:#?}",
-        tree.store()
-            .branches_map()
-            .iter()
-            .sorted_by(|a, b| { a.0.cmp(b.0) })
-            .collect::<Vec<_>>()
+#[test]
+fn test_contiguous() {
+    let bytes_list: [[u8; 32]; 4] = [
+        hex!("0000000000000000000000000000000000000000000000000000000000000001"),
+        hex!("0000000000000000000000000000000000000000000000000000000000000002"),
+        hex!("0000000000000000000000000000000000000000000000000000000000000003"),
+        hex!("0000000000000000000000000000000000000000000000000000000000000004"),
+    ];
+
+    let mut tree = SMT::default();
+    for bytea in &bytes_list {
+        let key: H256 = { (*bytea).into() };
+
+        let value: H256 = { (*bytea).into() };
+        tree.update(key, value, true).expect("update");
+    }
+
+    assert_eq!(
+        *tree.root(),
+        H256::from(hex!(
+            "d29a1db072a0b7f3320854eae1c4d99914a9679579f76486d9c48be352a56181"
+        ))
     );
 
     test_proof(
         tree,
-        hex!("c11ba1980eae54000000000000420dc24ab8c31f2c6ca2a791af8eaeb855a52b"),
+        hex!("0000000000000000000000000000000000000000000000000000000000000003"),
     );
 }

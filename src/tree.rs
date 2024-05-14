@@ -1,3 +1,5 @@
+use bitvec::{order::Msb0, slice::BitSlice};
+
 use crate::{
     error::{Error, Result},
     h256::H256,
@@ -50,7 +52,7 @@ pub enum Match {
 impl ChildKey {
     fn get_intersecting_height(
         &self,
-        other_key: H256,
+        mut other_key: H256,
         max_height: u8,
     ) -> core::result::Result<u8, Match> {
         match self {
@@ -58,33 +60,58 @@ impl ChildKey {
                 if key == &other_key {
                     return Err(Match::Exact);
                 }
+                let mut key = *key;
+
+                let key = key.as_mut_slice();
+
+                let other_key = other_key.as_mut_slice();
+
+                let key: &mut BitSlice<_, Msb0> = BitSlice::from_slice_mut(key);
+                let other_key: &mut BitSlice<_, Msb0> = BitSlice::from_slice_mut(other_key);
 
                 for i in 0..max_height {
-                    let parent_key_leaf = key.parent_path_by_height(i);
+                    key.shift_right(1);
+                    other_key.shift_right(1);
 
-                    let other_parent_key = other_key.parent_path_by_height(i);
-
-                    if parent_key_leaf == other_parent_key {
+                    if key == other_key {
                         return Ok(i);
                     }
                 }
                 Err(Match::NoMatch)
             }
             ChildKey::Branch(key) => {
-                for i in 1..max_height {
-                    let parent_key_leaf = if key.height > i {
-                        continue;
-                    } else if (key.height + 1) / 8 == (i + 1) / 8 {
-                        key.node_key
-                            .parent_path_by_height(i - ((key.height + 1) % 8))
-                    } else {
-                        key.node_key.parent_path_by_height(i)
-                    };
+                let branch_height = key.height;
 
-                    let other_parent_key = other_key.parent_path_by_height(i);
+                let mut key = key.node_key;
 
-                    if parent_key_leaf == other_parent_key {
-                        return Ok(i);
+                let key = key.as_mut_slice();
+
+                let other_key = other_key.as_mut_slice();
+
+                let key: &mut BitSlice<_, Msb0> = BitSlice::from_slice_mut(key);
+                let other_key: &mut BitSlice<_, Msb0> = BitSlice::from_slice_mut(other_key);
+
+                for i in 0..max_height {
+                    match branch_height.cmp(&i) {
+                        Ordering::Less => {
+                            key.shift_right(1);
+
+                            other_key.shift_right(1);
+
+                            if key == other_key {
+                                return Ok(i);
+                            }
+                        }
+                        Ordering::Equal => {
+                            other_key.shift_right(1);
+
+                            if key == other_key {
+                                return Ok(i);
+                            }
+                        }
+                        Ordering::Greater => {
+                            other_key.shift_right(1);
+                        }
                     }
                 }
                 Err(Match::NoMatch)
@@ -260,12 +287,12 @@ impl<H: Hasher + Default, V: Value + Debug, S: StoreReadOps<V> + StoreWriteOps<V
                 let left_inter_height = parent_branch
                     .left
                     .1
-                    .get_intersecting_height(current_key, current_height);
+                    .get_intersecting_height(current_key, key.height);
 
                 let right_inter_height = parent_branch
                     .right
                     .1
-                    .get_intersecting_height(current_key, current_height);
+                    .get_intersecting_height(current_key, key.height);
 
                 match (left_inter_height, right_inter_height) {
                     (Err(Match::Exact), _) if insertion => {
@@ -368,14 +395,20 @@ impl<H: Hasher + Default, V: Value + Debug, S: StoreReadOps<V> + StoreWriteOps<V
 
                     (Err(Match::NoMatch), Err(Match::NoMatch)) => {
                         assert!(insertion);
+                        assert!(current_height > key.height);
+
                         let parent_key = current_key.parent_path_by_height(current_height);
                         let parent_branch_key = BranchKey::new(current_height, parent_key);
-                        let sub_key = current_key.parent_path_by_height(current_height - 1);
+                        let sub_key = if current_height == 0 {
+                            current_key
+                        } else {
+                            current_key.parent_path_by_height(current_height - 1)
+                        };
 
                         let parent_merged_value =
                             merge::<H>(&parent_branch.left.0, &parent_branch.right.0);
 
-                        if sub_key.is_right(current_height) {
+                        if sub_key.is_right() {
                             let merge_value = merge::<H>(&parent_merged_value, &current_node);
                             self.store.insert_branch(
                                 parent_branch_key.clone(),
@@ -384,6 +417,7 @@ impl<H: Hasher + Default, V: Value + Debug, S: StoreReadOps<V> + StoreWriteOps<V
                                     right: (current_node, ChildKey::Leaf(current_key)),
                                 },
                             )?;
+
                             Ok((merge_value, ChildKey::Branch(parent_branch_key)))
                         } else {
                             let merge_value = merge::<H>(&current_node, &parent_merged_value);
