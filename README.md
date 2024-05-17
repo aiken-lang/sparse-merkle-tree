@@ -1,5 +1,7 @@
 # sparse-merkle-tree
 
+***WIP Have a few more kinks to iron out***
+
 The merkle tree functions are located in sparse.ak. 
 
 Currently the supported functionality is:
