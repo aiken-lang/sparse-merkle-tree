@@ -315,6 +315,25 @@ test sparse_merkle_proof_8() {
   expected_root == actual_root
 }
 
+fn helper_9_left_proofs() {
+  #"6a91502556c5251ffcd0c5e3a40628de24f9ee0b337b31f2f79b160c5915f64e"
+    |> bytearray.concat(leaf_byte, _)
+    |> hash.blake2b_256
+    |> bytearray.concat(#"fc")
+    |> bytearray.concat(
+        bytearray.concat(
+          leaf_byte,
+          #"55d5551e8e1323d35afe53cf8698867c9de9a408e97ee968dc8414d527cc719c",
+        )
+          |> hash.blake2b_256
+          |> bytearray.concat(#"fd"),
+      )
+    |> bytearray.concat(
+        #"283918a40948a0e69cd88d289b09c54c94300a9c0d379c8b55b8974ec30a3f8a",
+      )
+    |> bytearray.concat(#"fe")
+}
+
 test sparse_merkle_proof_9() {
   let old_root =
     #"5a812ad3240bc532aea6f0b8427ccf929a20bdd0a08bcad062207b14a65e9be8"
@@ -327,23 +346,7 @@ test sparse_merkle_proof_9() {
 
   let data_serializer = identity
 
-  let left_proofs =
-    #"6a91502556c5251ffcd0c5e3a40628de24f9ee0b337b31f2f79b160c5915f64e"
-      |> bytearray.concat(leaf_byte, _)
-      |> hash.blake2b_256
-      |> bytearray.concat(#"fc")
-      |> bytearray.concat(
-          bytearray.concat(
-            leaf_byte,
-            #"55d5551e8e1323d35afe53cf8698867c9de9a408e97ee968dc8414d527cc719c",
-          )
-            |> hash.blake2b_256
-            |> bytearray.concat(#"fd"),
-        )
-      |> bytearray.concat(
-          #"283918a40948a0e69cd88d289b09c54c94300a9c0d379c8b55b8974ec30a3f8a",
-        )
-      |> bytearray.concat(#"fe")
+  let left_proofs = helper_9_left_proofs()
 
   let proof_block =
     MerkleProofBlock {
