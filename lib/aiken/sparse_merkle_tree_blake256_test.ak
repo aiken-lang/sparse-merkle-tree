@@ -51,6 +51,9 @@ fn add_member(
       intersecting_level,
     )
 
+  trace to_string(before_member_hash)
+  trace to_string(after_member_hash)
+
   expect and {
       check_bounds(left_leaf, right_leaf, member_hash)?,
       // Verify old and new roots
@@ -146,7 +149,7 @@ test sparse_merkle_proof_3() {
       left_proofs: "",
       right_proofs: #"",
       continuing_side_proofs: "",
-      // 01 for Left, ff for Height, rest is the hash of the right side of the tree
+      // 01 for Right, ff for Height, rest is the hash of the right side of the tree
       remaining_proofs: #"01ffdb65bcd7895000b3a79103f0e4089eb8f7c1521fe372b388630e38883ad5e832",
       left_right_intersection: 254,
       intersecting_level: 253,
@@ -183,10 +186,39 @@ test sparse_merkle_proof_4() {
           |> hash.blake2b_256,
       ),
       continuing_side_proofs: "",
-      // 01 for Left, ff for Height, rest is the hash of the right side of the tree
+      // 01 for Right, ff for Height, rest is the hash of the right side of the tree
       remaining_proofs: #"01ffdb65bcd7895000b3a79103f0e4089eb8f7c1521fe372b388630e38883ad5e832",
       left_right_intersection: 254,
       intersecting_level: 253,
+    }
+
+  let actual_root = add_member(member, data_serializer, proof_block, old_root)
+
+  expected_root == actual_root
+}
+
+test sparse_merkle_proof_5() {
+  let old_root =
+    #"e53502fcf8e19ddd4130fb7430c89f7092e96493d7081486c8b9f452217096df"
+
+  let expected_root = #""
+
+  // #"f674b9b0c22bb6f74dd54716b875e13416a1d270bdf0257c6fd4b864b3cb5b98"
+  let member = "blueberry (92383)"
+
+  let data_serializer = identity
+
+  let proof_block =
+    MerkleProofBlock {
+      left_leaf: #"a909ba8699e34f8a78bacd04266b57f36ff3a758b93c0c31b0aaa18ba0be1e87",
+      right_leaf: merkle_upper_bound,
+      left_proofs: #"",
+      right_proofs: #"",
+      continuing_side_proofs: "",
+      // 00 for Left, ff as the last byte for Height, rest is the hash of the left side of the tree
+      remaining_proofs: #"0020239d3b582b94d8580b200cc76df1e787e5040f5fe8737ca47eb311763ef261ff",
+      left_right_intersection: 254,
+      intersecting_level: 251,
     }
 
   let actual_root = add_member(member, data_serializer, proof_block, old_root)
