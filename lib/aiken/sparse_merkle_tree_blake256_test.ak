@@ -1,7 +1,9 @@
+use aiken/bytearray
+use aiken/hash
 use aiken/sparse_merkle_tree/consts.{merkle_lower_bound, merkle_upper_bound}
 use aiken/sparse_merkle_tree/merkle_blake256.{
   MerkleProofBlock, Root, check_bounds, check_heights, combine_proofs,
-  get_starting_side, hash_to_hashed_proof, left_proof, right_proof,
+  get_starting_side, hash_to_hashed_proof, leaf_byte, left_proof, right_proof,
   test_add_member, to_string, validate_structure, verify_root,
 }
 use aiken/sparse_merkle_tree_blake256.{init_root}
@@ -856,6 +858,7 @@ test sparse_merkle_proof_1() {
   let expected_root =
     #"18c8dbcc059576ec251c90862baee3387c4ea916ef72e6f7dbf15502521ebed2"
 
+  // #"7cf7b9047b2ebdf8bcd289e621c7a8bd304f77f312c287c41848605d8b0deb70"
   let member = "apple (0)"
 
   let data_serializer = identity
@@ -865,6 +868,38 @@ test sparse_merkle_proof_1() {
       left_leaf: merkle_lower_bound,
       right_leaf: merkle_upper_bound,
       left_proofs: "",
+      right_proofs: "",
+      continuing_side_proofs: "",
+      remaining_proofs: "",
+      left_right_intersection: 255,
+      intersecting_level: 254,
+    }
+
+  let actual_root = add_member(member, data_serializer, proof_block, old_root)
+
+  expected_root == actual_root
+}
+
+test sparse_merkle_proof_2() {
+  let old_root =
+    #"18c8dbcc059576ec251c90862baee3387c4ea916ef72e6f7dbf15502521ebed2"
+
+  let expected_root =
+    #"49148fa603b03d70fff1733cb9a70a35b9057637e11cde68e30f6f624b001504"
+
+  // #"a909ba8699e34f8a78bacd04266b57f36ff3a758b93c0c31b0aaa18ba0be1e87"
+  let member = "apricot (0)"
+
+  let data_serializer = identity
+
+  let proof_block =
+    MerkleProofBlock {
+      left_leaf: #"7cf7b9047b2ebdf8bcd289e621c7a8bd304f77f312c287c41848605d8b0deb70",
+      right_leaf: merkle_upper_bound,
+      left_proofs: bytearray.concat(
+        bytearray.concat(leaf_byte, merkle_lower_bound) |> hash.blake2b_256,
+        #"fe",
+      ),
       right_proofs: "",
       continuing_side_proofs: "",
       remaining_proofs: "",

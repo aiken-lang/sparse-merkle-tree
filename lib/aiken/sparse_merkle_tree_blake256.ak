@@ -11,7 +11,9 @@ use aiken/sparse_merkle_tree/merkle_blake256.{
 
 pub fn init_root() -> Root<a> {
   let lower_leaf =
-    leaf_byte |> bytearray.concat(merkle_lower_bound) |> hash.blake2b_256
+    leaf_byte
+      |> bytearray.concat(merkle_lower_bound)
+      |> hash.blake2b_256
 
   let upper_leaf =
     leaf_byte |> bytearray.concat(merkle_upper_bound) |> hash.blake2b_256

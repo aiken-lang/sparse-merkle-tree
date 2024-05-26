@@ -228,6 +228,11 @@ pub fn combine_sides(
     |> HashedProof
 }
 
+pub fn pass_through_trace(x: ByteArray) -> ByteArray {
+  trace to_hex(x)
+  x
+}
+
 /// Combine the left and right proofs to get the new combined hash
 /// Then repeat with the item to be inserted
 pub fn combine_proofs(
@@ -347,11 +352,7 @@ pub fn left_proof(
     leaf_byte
       |> bytearray.concat(left_leaf.inner)
       |> hash.blake2b_256
-      |> do_left_proof(
-          left_side,
-          bytearray.length(left_side.inner),
-          proof_length(),
-        )
+      |> do_left_proof(left_side, bytearray.length(left_side.inner), 0)
       |> HashedProof
   }
 }
@@ -442,11 +443,7 @@ pub fn right_proof(
     leaf_byte
       |> bytearray.concat(right_leaf.inner)
       |> hash.blake2b_256
-      |> do_right_proof(
-          right_side,
-          bytearray.length(right_side.inner),
-          proof_length(),
-        )
+      |> do_right_proof(right_side, bytearray.length(right_side.inner), 0)
       |> HashedProof
   }
 }
