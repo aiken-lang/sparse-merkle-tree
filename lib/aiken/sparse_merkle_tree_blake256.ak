@@ -1,15 +1,24 @@
+use aiken/builtin
 use aiken/bytearray
 use aiken/hash
 use aiken/sparse_merkle_tree/consts.{merkle_lower_bound, merkle_upper_bound}
 use aiken/sparse_merkle_tree/merkle_blake256.{
   MerkleProofBlock, Root, check_bounds, check_heights, combine_proofs,
   combine_sides, convert_bytes_to_remainder_proofs, get_starting_side,
-  hash_to_hashed_proof, left_proof, right_proof, validate_structure, verify_root,
+  hash_to_hashed_proof, leaf_byte, left_proof, right_proof, validate_structure,
+  verify_root,
 }
 
 pub fn init_root() -> Root<a> {
-  merkle_lower_bound
-    |> bytearray.concat(merkle_upper_bound)
+  let lower_leaf =
+    leaf_byte |> bytearray.concat(merkle_lower_bound) |> hash.blake2b_256
+
+  let upper_leaf =
+    leaf_byte |> bytearray.concat(merkle_upper_bound) |> hash.blake2b_256
+
+  upper_leaf
+    |> builtin.cons_bytearray(255, _)
+    |> bytearray.concat(lower_leaf, _)
     |> hash.blake2b_256
 }
 
@@ -31,8 +40,8 @@ pub fn verify_added_member(
     right_proofs,
     continuing_side_proofs,
     remaining_proofs,
-    intersecting_level,
     left_right_intersection,
+    intersecting_level,
   <- validate_structure(proof_block)
 
   let starting_side =
@@ -52,8 +61,8 @@ pub fn verify_added_member(
       hashed_left,
       hashed_right,
       member_hash,
-      intersecting_level,
       left_right_intersection,
+      intersecting_level,
     )
 
   and {

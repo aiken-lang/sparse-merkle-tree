@@ -1,5 +1,5 @@
 use aiken/builtin
-use aiken/bytearray
+use aiken/bytearray.{to_hex}
 use aiken/hash.{Blake2b_256, Hash}
 use aiken/math
 use aiken/sparse_merkle_tree/consts.{merkle_lower_bound, merkle_upper_bound}
@@ -44,7 +44,7 @@ pub fn get_starting_side(
   } else {
     let previous_bytes = bit_to_test - 1
 
-    let bit_shift = math.pow2(previous_bytes % 8)
+    let bit_shift = math.pow2(7 - previous_bytes % 8)
     let other_bytes = previous_bytes / 8
 
     let left_previous_bytes =
@@ -117,6 +117,10 @@ pub fn hash_to_hashed_proof(bytes: ByteArray) -> HashedProof<a> {
   HashedProof { inner: bytes |> hash.blake2b_256 }
 }
 
+pub fn to_string(proof: HashedProof<a>) {
+  to_hex(proof.inner)
+}
+
 pub fn proof_length() -> Int {
   hash_length + 1
 }
@@ -154,6 +158,13 @@ pub fn verify_root(
   root: Root<a>,
 ) -> Bool {
   do_verify_root(hashed_proof.inner, bounds, bytearray.length(bounds.inner), 0) == root
+}
+
+pub fn test_add_member(
+  bounds: MerkleRemainderProofs<a>,
+  hashed_proof: HashedProof<a>,
+) -> Root<a> {
+  do_verify_root(hashed_proof.inner, bounds, bytearray.length(bounds.inner), 0)
 }
 
 fn do_verify_root(
@@ -195,7 +206,7 @@ pub opaque type ContinuingSideProofs<a> {
 }
 
 pub fn convert_to_side_proof(bytes: ByteArray) -> ContinuingSideProofs<a> {
-  expect bytearray.length(bytes) == proof_length()
+  expect bytearray.length(bytes) % proof_length() == 0
 
   ContinuingSideProofs { inner: bytes }
 }
@@ -526,7 +537,8 @@ pub fn validate_structure(proof_block: MerkleProofBlock<a>, callback) {
 
   expect intersecting_level < 256 && intersecting_level > -1
 
-  expect left_right_intersection < 256 && left_right_intersection > -1
+  expect
+    left_right_intersection < 256 && left_right_intersection > -1 && left_right_intersection > intersecting_level
 
   callback(
     left_leaf,

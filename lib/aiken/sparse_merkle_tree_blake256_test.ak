@@ -1,3 +1,11 @@
+use aiken/sparse_merkle_tree/consts.{merkle_lower_bound, merkle_upper_bound}
+use aiken/sparse_merkle_tree/merkle_blake256.{
+  MerkleProofBlock, Root, check_bounds, check_heights, combine_proofs,
+  get_starting_side, hash_to_hashed_proof, left_proof, right_proof,
+  test_add_member, to_string, validate_structure, verify_root,
+}
+use aiken/sparse_merkle_tree_blake256.{init_root}
+
 // use aiken/builtin
 // use aiken/bytearray
 // use aiken/cbor
@@ -783,3 +791,88 @@
 // // let (divisor, level_one) = sparse_merkelize_level(map_list)
 // //   True
 // // }
+
+fn add_member(
+  member: a,
+  data_serializer: fn(a) -> ByteArray,
+  proof_block: MerkleProofBlock<a>,
+  old_root: Root<a>,
+) -> ByteArray {
+  let member_hash = member |> data_serializer |> hash_to_hashed_proof
+
+  let
+    left_leaf,
+    right_leaf,
+    left_proofs,
+    right_proofs,
+    continuing_side_proofs,
+    remaining_proofs,
+    left_right_intersection,
+    intersecting_level,
+  <- validate_structure(proof_block)
+
+  trace to_string(member_hash)
+
+  let starting_side =
+    get_starting_side(left_leaf, right_leaf, member_hash, intersecting_level)
+
+  let hashed_left = left_leaf |> left_proof(left_proofs)
+
+  let hashed_right = right_leaf |> right_proof(right_proofs)
+
+  let
+    before_member_hash,
+    after_member_hash,
+  <-
+    combine_proofs(
+      starting_side,
+      continuing_side_proofs,
+      hashed_left,
+      hashed_right,
+      member_hash,
+      left_right_intersection,
+      intersecting_level,
+    )
+
+  expect and {
+      check_bounds(left_leaf, right_leaf, member_hash)?,
+      // Verify old and new roots
+      verify_root(remaining_proofs, before_member_hash, old_root)?,
+      check_heights(
+        left_proofs,
+        right_proofs,
+        continuing_side_proofs,
+        intersecting_level,
+        starting_side,
+      )?,
+    }
+
+  test_add_member(remaining_proofs, after_member_hash)
+}
+
+test sparse_merkle_proof_1() {
+  let old_root = init_root()
+
+  let expected_root =
+    #"18c8dbcc059576ec251c90862baee3387c4ea916ef72e6f7dbf15502521ebed2"
+
+  let member = "apple (0)"
+
+  let data_serializer = identity
+
+  let proof_block =
+    MerkleProofBlock {
+      left_leaf: merkle_lower_bound,
+      right_leaf: merkle_upper_bound,
+      left_proofs: "",
+      right_proofs: "",
+      continuing_side_proofs: "",
+      remaining_proofs: "",
+      left_right_intersection: 255,
+      intersecting_level: 254,
+    }
+
+  let actual_root = add_member(member, data_serializer, proof_block, old_root)
+
+  expected_root == actual_root
+}
