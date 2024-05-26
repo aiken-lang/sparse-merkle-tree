@@ -51,9 +51,6 @@ fn add_member(
       intersecting_level,
     )
 
-  trace to_string(before_member_hash)
-  trace to_string(after_member_hash)
-
   expect and {
       check_bounds(left_leaf, right_leaf, member_hash)?,
       // Verify old and new roots
@@ -199,9 +196,10 @@ test sparse_merkle_proof_4() {
 
 test sparse_merkle_proof_5() {
   let old_root =
-    #"e53502fcf8e19ddd4130fb7430c89f7092e96493d7081486c8b9f452217096df"
+    #"8333b7d8020aa5101ae770c2b8ea84ad84834ea106413d309fbbf226816b6a17"
 
-  let expected_root = #""
+  let expected_root =
+    #"e53502fcf8e19ddd4130fb7430c89f7092e96493d7081486c8b9f452217096df"
 
   // #"f674b9b0c22bb6f74dd54716b875e13416a1d270bdf0257c6fd4b864b3cb5b98"
   let member = "blueberry (92383)"
