@@ -1,3 +1,4 @@
+use aiken/builtin
 use aiken/bytearray
 use aiken/hash
 use aiken/sparse_merkle_tree/consts.{merkle_lower_bound, merkle_upper_bound}
@@ -905,6 +906,73 @@ test sparse_merkle_proof_2() {
       remaining_proofs: "",
       left_right_intersection: 255,
       intersecting_level: 254,
+    }
+
+  let actual_root = add_member(member, data_serializer, proof_block, old_root)
+
+  expected_root == actual_root
+}
+
+test sparse_merkle_proof_3() {
+  let old_root =
+    #"49148fa603b03d70fff1733cb9a70a35b9057637e11cde68e30f6f624b001504"
+
+  let expected_root =
+    #"9ea42e89c070ee103f27ae748c0aa9ce268d2f44e66568423409fa4f659cdb7a"
+
+  // #"55d5551e8e1323d35afe53cf8698867c9de9a408e97ee968dc8414d527cc719c"
+  let member = "banana (328)"
+
+  let data_serializer = identity
+
+  let proof_block =
+    MerkleProofBlock {
+      left_leaf: merkle_lower_bound,
+      right_leaf: #"7cf7b9047b2ebdf8bcd289e621c7a8bd304f77f312c287c41848605d8b0deb70",
+      left_proofs: "",
+      right_proofs: #"",
+      continuing_side_proofs: "",
+      // 01 for Left, ff for Height, rest is the hash of the right side of the tree
+      remaining_proofs: #"01ffdb65bcd7895000b3a79103f0e4089eb8f7c1521fe372b388630e38883ad5e832",
+      left_right_intersection: 254,
+      intersecting_level: 253,
+    }
+
+  let actual_root = add_member(member, data_serializer, proof_block, old_root)
+
+  expected_root == actual_root
+}
+
+test sparse_merkle_proof_4() {
+  let old_root =
+    #"9ea42e89c070ee103f27ae748c0aa9ce268d2f44e66568423409fa4f659cdb7a"
+
+  let expected_root =
+    #"8333b7d8020aa5101ae770c2b8ea84ad84834ea106413d309fbbf226816b6a17"
+
+  // #"3378b5c960257ffe7c3e86d00563739bdf7db730e10732f6b943a4c1802fd05e"
+  let member = "blackberry (0)"
+
+  let data_serializer = identity
+
+  let proof_block =
+    MerkleProofBlock {
+      left_leaf: merkle_lower_bound,
+      right_leaf: #"55d5551e8e1323d35afe53cf8698867c9de9a408e97ee968dc8414d527cc719c",
+      left_proofs: #"",
+      right_proofs: bytearray.concat(
+        #"fd",
+        bytearray.concat(
+          leaf_byte,
+          #"7cf7b9047b2ebdf8bcd289e621c7a8bd304f77f312c287c41848605d8b0deb70",
+        )
+          |> hash.blake2b_256,
+      ),
+      continuing_side_proofs: "",
+      // 01 for Left, ff for Height, rest is the hash of the right side of the tree
+      remaining_proofs: #"01ffdb65bcd7895000b3a79103f0e4089eb8f7c1521fe372b388630e38883ad5e832",
+      left_right_intersection: 254,
+      intersecting_level: 253,
     }
 
   let actual_root = add_member(member, data_serializer, proof_block, old_root)
