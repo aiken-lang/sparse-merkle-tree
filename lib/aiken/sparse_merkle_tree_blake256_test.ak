@@ -441,3 +441,98 @@ test sparse_merkle_proof_10() {
 
   expected_root == actual_root
 }
+
+fn helper_11_left_proofs() {
+  #"a909ba8699e34f8a78bacd04266b57f36ff3a758b93c0c31b0aaa18ba0be1e87"
+    |> bytearray.concat(leaf_byte, _)
+    |> hash.blake2b_256
+    |> bytearray.concat(#"fa")
+    |> bytearray.concat(
+        bytearray.concat(
+          leaf_byte,
+          #"a454a2dad11be714f134e4d84321728dc596ecf5c91dda47e01c322bf2ad6a37",
+        )
+          |> hash.blake2b_256,
+      )
+    |> bytearray.concat(#"fb")
+}
+
+test sparse_merkle_proof_11() {
+  let old_root =
+    #"ce21ae7b870c1012db2b9d469e95a05540ad74640c236776139e52118d39f2fc"
+
+  let expected_root =
+    #"0170b41f8f90f96eb95a0dfc66b959fb4e7060ed738ee162076d03597a0f468f"
+
+  // #"e38564f70616708ffcd52bca9e48480f80168c232a9acfe7fa7e469b62f33c0b"
+  let member = "grape (110606)"
+
+  let data_serializer = identity
+
+  let proof_block =
+    MerkleProofBlock {
+      left_leaf: #"af7cd63fd75f935961ba7048b7f81244366198bd43fa60dfc43195a61507b859",
+      right_leaf: #"f674b9b0c22bb6f74dd54716b875e13416a1d270bdf0257c6fd4b864b3cb5b98",
+      left_proofs: helper_11_left_proofs(),
+      right_proofs: bytearray.concat(
+        #"fb",
+        bytearray.concat(leaf_byte, merkle_upper_bound)
+          |> hash.blake2b_256,
+      ),
+      continuing_side_proofs: #"",
+      remaining_proofs: #"00ab1f2bf177fa615f86f997bc8d92bc27d61f923a34e30e0ac659e831a2e90955ff",
+      left_right_intersection: 254,
+      intersecting_level: 252,
+    }
+
+  let actual_root = add_member(member, data_serializer, proof_block, old_root)
+
+  expected_root == actual_root
+}
+
+fn helper_12_right_proofs() {
+  let first =
+    #"6a91502556c5251ffcd0c5e3a40628de24f9ee0b337b31f2f79b160c5915f64e"
+  let second =
+    #"7cf7b9047b2ebdf8bcd289e621c7a8bd304f77f312c287c41848605d8b0deb70"
+
+  let first_hash = first |> bytearray.concat(leaf_byte, _) |> hash.blake2b_256
+  let second_hash = second |> bytearray.concat(leaf_byte, _) |> hash.blake2b_256
+
+  let first_proof =
+    first_hash
+      |> bytearray.concat(#"fc")
+      |> bytearray.concat(second_hash)
+      |> hash.blake2b_256
+
+  bytearray.concat(#"fd", first_proof)
+}
+
+test sparse_merkle_proof_12() {
+  let old_root =
+    #"0170b41f8f90f96eb95a0dfc66b959fb4e7060ed738ee162076d03597a0f468f"
+
+  let expected_root =
+    #"92cc9d3ed08668c5d71243ccac72b76b46c924e5cee13583665a13920b244e23"
+
+  // #"3f6ceadf0a21a7a754b9c796a18e83df1da75e59c2f88d09011995ba8dab9059"
+  let member = "grapefruit (0)"
+
+  let data_serializer = identity
+
+  let proof_block =
+    MerkleProofBlock {
+      left_leaf: #"3378b5c960257ffe7c3e86d00563739bdf7db730e10732f6b943a4c1802fd05e",
+      right_leaf: #"55d5551e8e1323d35afe53cf8698867c9de9a408e97ee968dc8414d527cc719c",
+      left_proofs: #"",
+      right_proofs: helper_12_right_proofs(),
+      continuing_side_proofs: #"4ac5fceda4fe0ba6787bf5967fc6d24698d0e845ea69f7fec3e41f067928e9f1fd",
+      remaining_proofs: #"01ff26363294ff627e13438ecc429926a7cb64686944ec0587128338e3b447dc30e5",
+      left_right_intersection: 254,
+      intersecting_level: 251,
+    }
+
+  let actual_root = add_member(member, data_serializer, proof_block, old_root)
+
+  expected_root == actual_root
+}
