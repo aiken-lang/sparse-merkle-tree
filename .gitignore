@@ -9,3 +9,6 @@ build/
 /target
 
 blocks.json
+
+**/node_modules
+**/babel.config.js

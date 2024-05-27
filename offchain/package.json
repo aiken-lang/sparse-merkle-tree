@@ -1,0 +1,25 @@
+{
+  "name": "sparse-merkle-tree",
+  "version": "0.0.1",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "jest"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "bitset": "^5.1.1",
+    "blakejs": "^1.2.1"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0",
+    "@babel/core": "^7.24.6",
+    "@babel/preset-env": "^7.24.6",
+    "@babel/preset-typescript": "^7.24.6",
+    "@types/jest": "^29.5.12",
+    "@types/node": "^20.12.12",
+    "babel-jest": "^29.7.0"
+  }
+}
