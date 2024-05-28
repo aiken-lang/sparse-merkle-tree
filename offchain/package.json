@@ -2,9 +2,24 @@
   "name": "sparse-merkle-tree",
   "version": "0.0.1",
   "description": "",
-  "main": "index.js",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    }
+  },
+  "type": "module",
   "scripts": {
-    "test": "jest"
+    "test": "vitest",
+    "test:ui": "vitest --ui",
+    "test:run": "vitest run",
+    "build": "tsup"
   },
   "keywords": [],
   "author": "",
@@ -14,12 +29,11 @@
     "blakejs": "^1.2.1"
   },
   "devDependencies": {
-    "jest": "^29.7.0",
-    "@babel/core": "^7.24.6",
-    "@babel/preset-env": "^7.24.6",
-    "@babel/preset-typescript": "^7.24.6",
-    "@types/jest": "^29.5.12",
+    "@tsconfig/node21": "^21.0.3",
     "@types/node": "^20.12.12",
-    "babel-jest": "^29.7.0"
+    "@vitest/ui": "^1.6.0",
+    "tsup": "^8.0.2",
+    "typescript": "^5.4.5",
+    "vitest": "^1.6.0"
   }
 }
