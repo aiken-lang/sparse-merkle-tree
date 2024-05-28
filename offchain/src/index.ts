@@ -15,7 +15,9 @@ export class Leaf {
         ? new TextEncoder().encode(value)
         : new Uint8Array(value);
 
-    this.key = new BitSet(blake2b(bufferValue, undefined, 32));
+    this.key = new BitSet(
+      Buffer.from(blake2b(bufferValue, undefined, 32)).reverse()
+    );
 
     this.value = bufferValue;
 
@@ -95,10 +97,12 @@ export class Branch {
       const heightDiff = childTwo instanceof Leaf ? 0 : childTwo.height + 1;
 
       keyOne = keyOne.slice(heightDiff);
+      currentHeight = heightDiff - 1;
     } else if (childTwo instanceof Leaf) {
       const heightDiff = childOne instanceof Leaf ? 0 : childOne.height + 1;
 
       keyTwo = keyTwo.slice(heightDiff);
+      currentHeight = heightDiff - 1;
     } else {
       currentHeight = Math.max(childOne.height, childTwo.height);
       if (childOne.height > childTwo.height) {
@@ -277,7 +281,11 @@ export class SparseMerkleTree extends Branch {
         ? new TextEncoder().encode(value)
         : new Uint8Array(value);
 
-    const initialKey = new BitSet(blake2b(bufferValue, undefined, 32));
+    console.log(blake2bHex(bufferValue, undefined, 32));
+
+    const initialKey = new BitSet(
+      Buffer.from(blake2b(bufferValue, undefined, 32)).reverse()
+    );
 
     super.doInsert(initialKey, value);
   }
