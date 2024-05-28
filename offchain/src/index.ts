@@ -4,6 +4,8 @@ import { Buffer } from "buffer";
 
 const leafBytes = new Uint8Array(Buffer.from("0deeffaad07783", "hex"));
 
+type Side = "left" | "right";
+
 export class Leaf {
   key: BitSet;
   value: Uint8Array;
@@ -28,6 +30,10 @@ export class Leaf {
     );
   }
 
+  getHash() {
+    return this.leafHash;
+  }
+
   doInsert(key: BitSet, value: string | Buffer) {
     let other = new Leaf(value);
 
@@ -50,6 +56,18 @@ export class Leaf {
 
       return newBranch;
     }
+  }
+
+  doMerkeProof(_key: BitSet): [Uint8Array, number, Side][] {
+    return [[blake2b(this.value, undefined, 32), 0, "left"]];
+  }
+
+  traverseLeft(): [Uint8Array, number, Side][] {
+    return [[blake2b(this.value, undefined, 32), 0, "left"]];
+  }
+
+  traverseRight(): [Uint8Array, number, Side][] {
+    return [[blake2b(this.value, undefined, 32), 0, "right"]];
   }
 
   static boundaryLeaf(isMin: boolean) {
@@ -156,6 +174,10 @@ export class Branch {
     }
   }
 
+  getHash() {
+    return this.branchHash;
+  }
+
   doInsert(key: BitSet, value: string | Buffer): Branch | Leaf {
     if (key.slice(this.height + 1).equals(this.key)) {
       let leftHeight = this.height - 1;
@@ -224,9 +246,9 @@ export class Branch {
         }
       }
 
-      if (leftHeight > 0 && rightHeight < 0) {
+      if (leftHeight >= 0 && rightHeight < 0) {
         this.leftChild = this.leftChild.doInsert(key, value);
-      } else if (leftHeight < 0 && rightHeight > 0) {
+      } else if (leftHeight < 0 && rightHeight >= 0) {
         this.rightChild = this.rightChild.doInsert(key, value);
       } else {
         throw new Error("Impossible");
@@ -263,6 +285,106 @@ export class Branch {
       return new Branch(new Leaf(value), this);
     }
   }
+
+  doMerkeProof(key: BitSet): [Uint8Array, number, Side][] {
+    let leftHeight = this.height - 1;
+
+    if (this.leftChild instanceof Leaf) {
+      while (leftHeight > -1) {
+        if (
+          key
+            .slice(leftHeight + 1)
+            .equals(this.leftChild.key.slice(leftHeight + 1))
+        ) {
+          break;
+        }
+
+        leftHeight--;
+      }
+    } else {
+      while (leftHeight >= this.leftChild.height) {
+        if (
+          key
+            .slice(leftHeight + 1)
+            .equals(
+              this.leftChild.key.slice(leftHeight - this.leftChild.height)
+            )
+        ) {
+          break;
+        }
+
+        leftHeight--;
+      }
+      if (leftHeight < this.leftChild.height) {
+        leftHeight = -1;
+      }
+    }
+
+    let rightHeight = this.height - 1;
+
+    if (this.rightChild instanceof Leaf) {
+      while (rightHeight > -1) {
+        if (
+          key
+            .slice(rightHeight + 1)
+            .equals(this.rightChild.key.slice(rightHeight + 1))
+        ) {
+          break;
+        }
+
+        rightHeight--;
+      }
+    } else {
+      while (rightHeight >= this.rightChild.height) {
+        if (
+          key
+            .slice(rightHeight + 1)
+            .equals(
+              this.rightChild.key.slice(rightHeight - this.rightChild.height)
+            )
+        ) {
+          break;
+        }
+
+        rightHeight--;
+      }
+      if (rightHeight < this.rightChild.height) {
+        rightHeight = -1;
+      }
+    }
+
+    if (key.equals(this.leftChild.key)) {
+      return this.rightChild.traverseLeft();
+    } else if (key.equals(this.rightChild.key)) {
+      return this.leftChild.traverseRight();
+    } else if (leftHeight >= 0 && rightHeight < 0) {
+      return [
+        [this.rightChild.getHash(), this.height, "right"],
+        ...this.leftChild.doMerkeProof(key),
+      ];
+    } else if (leftHeight < 0 && rightHeight >= 0) {
+      return [
+        [this.leftChild.getHash(), this.height, "left"],
+        ...this.rightChild.doMerkeProof(key),
+      ];
+    } else {
+      throw new Error("Impossible");
+    }
+  }
+
+  traverseLeft(): [Uint8Array, number, Side][] {
+    return [
+      [this.rightChild.getHash(), this.height, "right"],
+      ...this.leftChild.traverseLeft(),
+    ];
+  }
+
+  traverseRight(): [Uint8Array, number, Side][] {
+    return [
+      [this.leftChild.getHash(), this.height, "left"],
+      ...this.rightChild.traverseRight(),
+    ];
+  }
 }
 
 export class SparseMerkleTree extends Branch {
@@ -281,12 +403,25 @@ export class SparseMerkleTree extends Branch {
         ? new TextEncoder().encode(value)
         : new Uint8Array(value);
 
-    console.log(blake2bHex(bufferValue, undefined, 32));
-
     const initialKey = new BitSet(
       Buffer.from(blake2b(bufferValue, undefined, 32)).reverse()
     );
 
     super.doInsert(initialKey, value);
+  }
+
+  merkleProof(value: string | Buffer) {
+    const bufferValue: Uint8Array =
+      typeof value == "string"
+        ? new TextEncoder().encode(value)
+        : new Uint8Array(value);
+
+    const initialKey = new BitSet(
+      Buffer.from(blake2b(bufferValue, undefined, 32)).reverse()
+    );
+
+    let proofArray = super.doMerkeProof(initialKey);
+
+    return proofArray;
   }
 }

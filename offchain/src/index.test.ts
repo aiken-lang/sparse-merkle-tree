@@ -1,7 +1,7 @@
 import { expect, test } from "vitest";
 import { Buffer } from "buffer";
 
-import { Leaf, SparseMerkleTree } from "./index.js";
+import { SparseMerkleTree } from "./index.js";
 
 test("Test 1", () => {
   const x = new SparseMerkleTree();
@@ -20,7 +20,7 @@ test("Test 1", () => {
     "ce21ae7b870c1012db2b9d469e95a05540ad74640c236776139e52118d39f2fc",
     "0170b41f8f90f96eb95a0dfc66b959fb4e7060ed738ee162076d03597a0f468f",
     "92cc9d3ed08668c5d71243ccac72b76b46c924e5cee13583665a13920b244e23",
-  ].map((x) => Buffer.from(x, "hex").toString("hex"));
+  ];
 
   x.insert("apple (0)");
 
@@ -73,4 +73,27 @@ test("Test 1", () => {
   expect(rootList.map((x) => Buffer.from(x).toString("hex"))).toStrictEqual(
     expectedList
   );
+});
+
+test("Test 2", () => {
+  const x = new SparseMerkleTree();
+  let rootList: Uint8Array[] = [];
+  const expectedList: string[] = [];
+
+  x.insert("apple (0)");
+  x.insert("apricot (0)");
+  x.insert("banana (328)");
+  x.insert("blackberry (0)");
+  x.insert("blueberry (92383)");
+  x.insert("cherry (0)");
+  x.insert("coconut (0)");
+  x.insert("cranberry (0)");
+  x.insert("durian (0)");
+  x.insert("fig (0)");
+  x.insert("grape (110606)");
+  x.insert("grapefruit (0)");
+
+  const thing = x.merkleProof("grapefruit (0)");
+
+  console.log(thing);
 });
