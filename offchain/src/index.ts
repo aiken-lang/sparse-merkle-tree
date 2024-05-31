@@ -137,7 +137,7 @@ export class Leaf {
     }
   }
 
-  doMerkeProof(_key: BitSet, _mutProof: MerkleProof): MerkleProof {
+  doModificationProof(_key: BitSet, _mutProof: MerkleProof): MerkleProof {
     throw new Error("Not possible");
   }
 
@@ -147,6 +147,10 @@ export class Leaf {
 
   traverseRight(mutProof: MerkleProof) {
     mutProof.leftLeaf = blake2b(this.value, undefined, 32);
+  }
+
+  doMemberProof(_key: BitSet): [Uint8Array, number, Side][] {
+    throw new Error("Not possible");
   }
 
   static boundaryLeaf(isMin: boolean) {
@@ -365,7 +369,153 @@ export class Branch {
     }
   }
 
-  doMerkeProof(key: BitSet, mutProof: MerkleProof) {
+  doModificationProof(key: BitSet, mutProof: MerkleProof) {
+    let leftHeight = this.height - 1;
+
+    if (this.leftChild instanceof Leaf) {
+      while (leftHeight > -1) {
+        if (
+          key
+            .slice(leftHeight + 1)
+            .equals(this.leftChild.key.slice(leftHeight + 1))
+        ) {
+          break;
+        }
+
+        leftHeight--;
+      }
+    } else {
+      while (leftHeight >= this.leftChild.height) {
+        if (
+          key
+            .slice(leftHeight + 1)
+            .equals(
+              this.leftChild.key.slice(leftHeight - this.leftChild.height)
+            )
+        ) {
+          break;
+        }
+
+        leftHeight--;
+      }
+      if (leftHeight < this.leftChild.height) {
+        leftHeight = -1;
+      }
+    }
+
+    let rightHeight = this.height - 1;
+
+    if (this.rightChild instanceof Leaf) {
+      while (rightHeight > -1) {
+        if (
+          key
+            .slice(rightHeight + 1)
+            .equals(this.rightChild.key.slice(rightHeight + 1))
+        ) {
+          break;
+        }
+
+        rightHeight--;
+      }
+    } else {
+      while (rightHeight >= this.rightChild.height) {
+        if (
+          key
+            .slice(rightHeight + 1)
+            .equals(
+              this.rightChild.key.slice(rightHeight - this.rightChild.height)
+            )
+        ) {
+          break;
+        }
+
+        rightHeight--;
+      }
+      if (rightHeight < this.rightChild.height) {
+        rightHeight = -1;
+      }
+    }
+
+    if (key.equals(this.rightChild.key)) {
+      mutProof.intersectingHeight = this.height;
+      mutProof.startingSide = "left";
+      this.leftChild.traverseRight(mutProof);
+      return;
+    } else if (key.equals(this.leftChild.key)) {
+      mutProof.intersectingHeight = this.height;
+      mutProof.startingSide = "right";
+      this.rightChild.traverseLeft(mutProof);
+
+      return;
+    } else if (leftHeight >= 0 && rightHeight < 0) {
+      this.leftChild.doModificationProof(key, mutProof);
+
+      if (
+        mutProof.startingSide === "left" &&
+        typeof mutProof.rightLeaf === "undefined"
+      ) {
+        this.rightChild.traverseLeft(mutProof);
+        mutProof.leftRightHeight = this.height;
+      } else if (
+        mutProof.startingSide === "right" &&
+        typeof mutProof.leftLeaf === "undefined"
+      ) {
+        mutProof.insertContinuingSideProof(
+          this.rightChild.getHash(),
+          this.height
+        );
+      } else {
+        mutProof.insertRemainingProof(
+          this.rightChild.getHash(),
+          this.height,
+          "right"
+        );
+      }
+      return;
+    } else if (leftHeight < 0 && rightHeight >= 0) {
+      this.rightChild.doModificationProof(key, mutProof);
+
+      if (
+        mutProof.startingSide === "right" &&
+        typeof mutProof.leftLeaf === "undefined"
+      ) {
+        this.leftChild.traverseRight(mutProof);
+        mutProof.leftRightHeight = this.height;
+      } else if (
+        mutProof.startingSide === "left" &&
+        typeof mutProof.rightLeaf === "undefined"
+      ) {
+        mutProof.insertContinuingSideProof(
+          this.rightChild.getHash(),
+          this.height
+        );
+      } else {
+        mutProof.insertRemainingProof(
+          this.leftChild.getHash(),
+          this.height,
+          "left"
+        );
+      }
+
+      return;
+    } else {
+      throw new Error("Impossible");
+    }
+  }
+
+  traverseLeft(mutProof: MerkleProof) {
+    this.leftChild.traverseLeft(mutProof);
+
+    mutProof.insertRightProof(this.rightChild.getHash(), this.height);
+  }
+
+  traverseRight(mutProof: MerkleProof) {
+    this.rightChild.traverseRight(mutProof);
+
+    mutProof.insertLeftProof(this.leftChild.getHash(), this.height);
+  }
+
+  doMemberProof(key: BitSet): [Uint8Array, number, Side][] {
     let leftHeight = this.height - 1;
 
     if (this.leftChild instanceof Leaf) {
@@ -433,80 +583,22 @@ export class Branch {
     }
 
     if (key.equals(this.leftChild.key)) {
-      mutProof.intersectingHeight = this.height;
-      mutProof.startingSide = "right";
-      this.rightChild.traverseLeft(mutProof);
-
-      return;
+      return [[this.rightChild.getHash(), this.height, "right"]];
     } else if (key.equals(this.rightChild.key)) {
-      mutProof.intersectingHeight = this.height;
-      mutProof.startingSide = "left";
-      this.leftChild.traverseRight(mutProof);
-      return;
+      return [[this.leftChild.getHash(), this.height, "left"]];
     } else if (leftHeight >= 0 && rightHeight < 0) {
-      this.leftChild.doMerkeProof(key, mutProof);
-
-      if (
-        mutProof.startingSide === "left" &&
-        typeof mutProof.rightLeaf === "undefined"
-      ) {
-        this.rightChild.traverseLeft(mutProof);
-      } else if (
-        mutProof.startingSide === "right" &&
-        typeof mutProof.leftLeaf === "undefined"
-      ) {
-        mutProof.insertContinuingSideProof(
-          this.rightChild.getHash(),
-          this.height
-        );
-      } else {
-        mutProof.insertRemainingProof(
-          this.rightChild.getHash(),
-          this.height,
-          "right"
-        );
-      }
-      return;
+      return [
+        [this.rightChild.getHash(), this.height, "right"],
+        ...this.leftChild.doMemberProof(key),
+      ];
     } else if (leftHeight < 0 && rightHeight >= 0) {
-      this.rightChild.doMerkeProof(key, mutProof);
-
-      if (
-        mutProof.startingSide === "right" &&
-        typeof mutProof.leftLeaf === "undefined"
-      ) {
-        this.leftChild.traverseRight(mutProof);
-      } else if (
-        mutProof.startingSide === "left" &&
-        typeof mutProof.rightLeaf === "undefined"
-      ) {
-        mutProof.insertContinuingSideProof(
-          this.rightChild.getHash(),
-          this.height
-        );
-      } else {
-        mutProof.insertRemainingProof(
-          this.leftChild.getHash(),
-          this.height,
-          "left"
-        );
-      }
-
-      return;
+      return [
+        [this.leftChild.getHash(), this.height, "left"],
+        ...this.rightChild.doMemberProof(key),
+      ];
     } else {
       throw new Error("Impossible");
     }
-  }
-
-  traverseLeft(mutProof: MerkleProof) {
-    this.leftChild.traverseLeft(mutProof);
-
-    mutProof.insertRightProof(this.rightChild.getHash(), this.height);
-  }
-
-  traverseRight(mutProof: MerkleProof) {
-    this.rightChild.traverseRight(mutProof);
-
-    mutProof.insertLeftProof(this.leftChild.getHash(), this.height);
   }
 }
 
@@ -533,7 +625,7 @@ export class SparseMerkleTree extends Branch {
     super.doInsert(initialKey, value);
   }
 
-  merkleProof(value: string | Buffer) {
+  modificationProof(value: string | Buffer) {
     const bufferValue: Uint8Array =
       typeof value == "string"
         ? new TextEncoder().encode(value)
@@ -545,8 +637,21 @@ export class SparseMerkleTree extends Branch {
 
     let merkleProof = new MerkleProof();
 
-    super.doMerkeProof(initialKey, merkleProof);
+    super.doModificationProof(initialKey, merkleProof);
 
     return merkleProof;
+  }
+
+  memberProof(value: string | Buffer) {
+    const bufferValue: Uint8Array =
+      typeof value == "string"
+        ? new TextEncoder().encode(value)
+        : new Uint8Array(value);
+
+    const initialKey = new BitSet(
+      Buffer.from(blake2b(bufferValue, undefined, 32)).reverse()
+    );
+
+    return super.doMemberProof(initialKey).reverse();
   }
 }

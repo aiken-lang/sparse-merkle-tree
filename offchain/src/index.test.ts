@@ -3,7 +3,7 @@ import { Buffer } from "buffer";
 
 import { SparseMerkleTree } from "./index.js";
 
-test("Test 1", () => {
+test("Test Insert", () => {
   const x = new SparseMerkleTree();
   let rootList = [x.branchHash];
   const expectedList = [
@@ -75,7 +75,7 @@ test("Test 1", () => {
   );
 });
 
-test("Test 2", () => {
+test("Test Modification Proof", () => {
   const x = new SparseMerkleTree();
   let rootList: Uint8Array[] = [];
   const expectedList: string[] = [];
@@ -92,13 +92,62 @@ test("Test 2", () => {
   x.insert("fig (0)");
   x.insert("grape (110606)");
 
-  const thing1 = x.merkleProof("grape (110606)");
+  const other = x.modificationProof("grape (110606)");
 
-  console.log(thing1.toString(), "\n\n");
+  console.log(other.toString(), "\n\n");
 
   x.insert("grapefruit (0)");
 
-  const thing = x.merkleProof("grapefruit (0)");
+  const expected = {
+    startingSide: "left",
+    remainingProofs: [
+      [
+        "26363294ff627e13438ecc429926a7cb64686944ec0587128338e3b447dc30e5",
+        255,
+        "right",
+      ],
+    ],
+    leftLeaf:
+      "3378b5c960257ffe7c3e86d00563739bdf7db730e10732f6b943a4c1802fd05e",
+    rightLeaf:
+      "55d5551e8e1323d35afe53cf8698867c9de9a408e97ee968dc8414d527cc719c",
+    leftProofs: [],
+    rightProofs: [
+      ["0bca11bb74090bc698bc7b811c23e87d97744b10c16f2c7d5e23d82bd5f41bea", 253],
+    ],
+    continuingSideProofs: [
+      ["3d7b9d20ff5e977c69307d9d264fe6b36cd0fc08b390578b09d33a9f044d77dd", 253],
+    ],
+    intersectingHeight: 251,
+    leftRightHeight: 254,
+  };
 
-  console.log(thing.toString());
+  const actual = x.modificationProof("grapefruit (0)");
+
+  console.log(actual.toString());
+
+  expect(actual.toString()).toStrictEqual(JSON.stringify(expected));
+});
+
+test("Test Member Proof", () => {
+  const x = new SparseMerkleTree();
+  let rootList: Uint8Array[] = [];
+  const expectedList: string[] = [];
+
+  x.insert("apple (0)");
+  x.insert("apricot (0)");
+  x.insert("banana (328)");
+  x.insert("blackberry (0)");
+  x.insert("blueberry (92383)");
+  x.insert("cherry (0)");
+  x.insert("coconut (0)");
+  x.insert("cranberry (0)");
+  x.insert("durian (0)");
+  x.insert("fig (0)");
+  x.insert("grape (110606)");
+  x.insert("grapefruit (0)");
+
+  const thing = x.memberProof("grapefruit (0)");
+
+  console.log(thing);
 });
