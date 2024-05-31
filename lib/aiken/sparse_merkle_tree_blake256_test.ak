@@ -623,31 +623,90 @@ test sparse_merkle_proof_15() {
 
   expected_root == actual_root
 }
-// test sparse_merkle_proof_x() {
-//   let old_root =
-//     #"bac6ba4a2096ec1495d2ccc0c4887e6edba895a8a0a4e73ae83270eab3915b52"
 
-//   let expected_root =
-//     #"07a52860f50b324e25f3e37877778699b919ac814bb597c1a4be3623e4b2f490"
+test sparse_merkle_proof_16() {
+  let old_root =
+    #"9ab9a24cdd3fa9d34bc08ac18a55b5cdbda84cc5a2b77a5c2c9c779ff3cf1547"
 
-//   // #"bd0f991572aef335da6ea31786aa8f147f5a4a1d374251548b2d03c008274595"
-//   let member = "yuzu (0)"
+  let expected_root =
+    #"1b723906517ef72f8b1d59af10f08b771565686301d499cf2d0e3d3fb1459c66"
 
-//   let data_serializer = identity
+  // #"e385223186560a8a8b36a5e829075d4bb8663d5734f1c349f5a63ca424c97814"
+  let member = "lemon (37694)"
 
-//   let proof_block =
-//     MerkleProofBlock {
-//       left_leaf: #"ba830de32503d8941eee8b8689332e8903841663d99c4442434858b1a147da75",
-//       right_leaf: #"c85531ce450e18f357f214ca0ef1f2bac4a010a1af5af81ddebf137608c5aad3",
-//       left_proofs: #"",
-//       right_proofs: #"fd0a45855e42b616c2ab268fb6419f821c68634637380683d0c894216f83ad6ef4",
-//       continuing_side_proofs: #"7bd9009653a1b6d1751b961be9204676d501614fe438f61e3ccf689ece1b5b65fc61a457f71e181ddf47baddd3abdcca35e2b25472c17b11871d41966e69bb4bfbfd",
-//       remaining_proofs: #"004ade9ca0cbd69b8322a0744fa751b4d4a91a280e4945ba5874a0c3fbfe76524dff",
-//       left_right_intersection: 254,
-//       intersecting_level: 250,
-//     }
+  let data_serializer = identity
 
-//   let actual_root = add_member(member, data_serializer, proof_block, old_root)
+  let proof_block =
+    MerkleProofBlock {
+      left_leaf: #"e0d9ffff534b7c5dad98baa3b5bd143e75ac512243f103c9c7f7da33cf7ce35d",
+      right_leaf: #"e38564f70616708ffcd52bca9e48480f80168c232a9acfe7fa7e469b62f33c0b",
+      left_proofs: #"",
+      right_proofs: #"",
+      continuing_side_proofs: #"",
+      remaining_proofs: #"01fcb86f38e6fc5114300c6974b11b583a5df4044b5cda79a4223f4ccd05b81e9355006dd12185c33ff535f91e2c87115843e07bdce28d131d4e17c7ead62282845cecfe00ef4267ae7f358032de7a4b03a94e0053c8b2053f7f3192b2d4d3b3de58311177ff",
+      left_right_intersection: 249,
+      intersecting_level: 238,
+    }
 
-//   expected_root == actual_root
-// }
+  let actual_root = add_member(member, data_serializer, proof_block, old_root)
+
+  expected_root == actual_root
+}
+
+test sparse_merkle_proof_17() {
+  let old_root =
+    #"1b723906517ef72f8b1d59af10f08b771565686301d499cf2d0e3d3fb1459c66"
+
+  let expected_root =
+    #"11b63fd19c821efadc7fffea9be9de5ec5425649bdfde63f67af034a6d1cb500"
+
+  // #"6f4ea6fccf5ca9a04569c75849d411720dcf223671be4a75e168f47d6762473f"
+  let member = "lime (0)"
+
+  let data_serializer = identity
+
+  let proof_block =
+    MerkleProofBlock {
+      left_leaf: #"6a91502556c5251ffcd0c5e3a40628de24f9ee0b337b31f2f79b160c5915f64e",
+      right_leaf: #"7cf7b9047b2ebdf8bcd289e621c7a8bd304f77f312c287c41848605d8b0deb70",
+      left_proofs: #"",
+      right_proofs: #"",
+      continuing_side_proofs: #"c46b05724575cee0741030ca4269eb52a099df1f5e36311bb6bd1024ede59236fb",
+      remaining_proofs: #"00eca601a0494aad382aafa43b6b6972e46a130f5d6b5b81b1fed4ed1b43fa3616fd00cc6bd81bceb4bf6ff011ab4c90e6e75902e85d8651afdf8479873da399382cbafe01ff29343c96b3b2de5abcc8776d85c4b6b8d044d3ea6fb55e78230181d8a0cc105c",
+      left_right_intersection: 252,
+      intersecting_level: 250,
+    }
+
+  let actual_root = add_member(member, data_serializer, proof_block, old_root)
+
+  expected_root == actual_root
+}
+
+test sparse_merkle_proof_x() {
+  let old_root =
+    #"bac6ba4a2096ec1495d2ccc0c4887e6edba895a8a0a4e73ae83270eab3915b52"
+
+  let expected_root =
+    #"07a52860f50b324e25f3e37877778699b919ac814bb597c1a4be3623e4b2f490"
+
+  // #"bd0f991572aef335da6ea31786aa8f147f5a4a1d374251548b2d03c008274595"
+  let member = "yuzu (0)"
+
+  let data_serializer = identity
+
+  let proof_block =
+    MerkleProofBlock {
+      left_leaf: #"ba830de32503d8941eee8b8689332e8903841663d99c4442434858b1a147da75",
+      right_leaf: #"c85531ce450e18f357f214ca0ef1f2bac4a010a1af5af81ddebf137608c5aad3",
+      left_proofs: #"",
+      right_proofs: #"fd0a45855e42b616c2ab268fb6419f821c68634637380683d0c894216f83ad6ef4",
+      continuing_side_proofs: #"bc0d60e5f1a745633d297f0275d0a6e51171a674b5246df446b6549207ec3bddfc9763947dcfc708abcd0f5bfc8ccec310b91c1db4acd90582d7d2fd2aed3a3ee9fd",
+      remaining_proofs: #"004ade9ca0cbd69b8322a0744fa751b4d4a91a280e4945ba5874a0c3fbfe76524dff",
+      left_right_intersection: 254,
+      intersecting_level: 250,
+    }
+
+  let actual_root = add_member(member, data_serializer, proof_block, old_root)
+
+  expected_root == actual_root
+}

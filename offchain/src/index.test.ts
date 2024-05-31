@@ -68,7 +68,6 @@ test("Test Insert", () => {
 test("Test Modification Proof", () => {
   const x = new SparseMerkleTree();
   let rootList: Uint8Array[] = [];
-  const expectedList: string[] = [];
 
   fruits.slice(0, 12).forEach((fruit) => {
     x.insert(fruit);
@@ -77,13 +76,6 @@ test("Test Modification Proof", () => {
 
   const expected = {
     startingSide: "left",
-    remainingProofs: [
-      [
-        "26363294ff627e13438ecc429926a7cb64686944ec0587128338e3b447dc30e5",
-        255,
-        "right",
-      ],
-    ],
     leftLeaf:
       "3378b5c960257ffe7c3e86d00563739bdf7db730e10732f6b943a4c1802fd05e",
     rightLeaf:
@@ -95,8 +87,15 @@ test("Test Modification Proof", () => {
     continuingSideProofs: [
       ["3d7b9d20ff5e977c69307d9d264fe6b36cd0fc08b390578b09d33a9f044d77dd", 253],
     ],
-    intersectingHeight: 251,
+    remainingProofs: [
+      [
+        "26363294ff627e13438ecc429926a7cb64686944ec0587128338e3b447dc30e5",
+        255,
+        "right",
+      ],
+    ],
     leftRightHeight: 254,
+    intersectingHeight: 251,
   };
 
   const actual = x.modificationProof("grapefruit (0)");
@@ -133,7 +132,7 @@ test("Test Modification Proof2", () => {
   const x = new SparseMerkleTree();
   let rootList: Uint8Array[] = [];
 
-  fruits.slice(0, 15).forEach((fruit) => {
+  fruits.forEach((fruit) => {
     x.insert(fruit);
     console.log(fruit);
     rootList.push(x.branchHash);
@@ -141,45 +140,8 @@ test("Test Modification Proof2", () => {
 
   console.log(rootList.map((x) => Buffer.from(x).toString("hex")));
 
-  const a = {
-    startingSide: "left",
-    remainingProofs: [
-      [
-        "dbb028d68f52c20d4055736b69101407d2aefa8d09e9bb7e3ea49f649a6155d3",
-        251,
-        "left",
-      ],
-      [
-        "ad29ecde0090b8b3098d28675be169f0feda70139ea1dd2c3470620036e01ed7",
-        254,
-        "right",
-      ],
-      [
-        "ef4267ae7f358032de7a4b03a94e0053c8b2053f7f3192b2d4d3b3de58311177",
-        255,
-        "left",
-      ],
-    ],
-    leftLeaf:
-      "a909ba8699e34f8a78bacd04266b57f36ff3a758b93c0c31b0aaa18ba0be1e87",
-    rightLeaf:
-      "af7cd63fd75f935961ba7048b7f81244366198bd43fa60dfc43195a61507b859",
-    leftProofs: [],
-    rightProofs: [],
-    continuingSideProofs: [],
-    intersectingHeight: 249,
-    leftRightHeight: 250,
-  };
-
   const expected = {
     startingSide: "left",
-    remainingProofs: [
-      [
-        "4ade9ca0cbd69b8322a0744fa751b4d4a91a280e4945ba5874a0c3fbfe76524d",
-        255,
-        "left",
-      ],
-    ],
     leftLeaf:
       "ba830de32503d8941eee8b8689332e8903841663d99c4442434858b1a147da75",
     rightLeaf:
@@ -189,16 +151,23 @@ test("Test Modification Proof2", () => {
       ["0a45855e42b616c2ab268fb6419f821c68634637380683d0c894216f83ad6ef4", 253],
     ],
     continuingSideProofs: [
-      ["7bd9009653a1b6d1751b961be9204676d501614fe438f61e3ccf689ece1b5b65", 252],
-      ["61a457f71e181ddf47baddd3abdcca35e2b25472c17b11871d41966e69bb4bfb", 253],
+      ["bc0d60e5f1a745633d297f0275d0a6e51171a674b5246df446b6549207ec3bdd", 252],
+      ["9763947dcfc708abcd0f5bfc8ccec310b91c1db4acd90582d7d2fd2aed3a3ee9", 253],
+    ],
+    remainingProofs: [
+      [
+        "4ade9ca0cbd69b8322a0744fa751b4d4a91a280e4945ba5874a0c3fbfe76524d",
+        255,
+        "left",
+      ],
     ],
     leftRightHeight: 254,
     intersectingHeight: 250,
   };
 
-  const actual = x.modificationProof("kumquat (0)");
+  const actual = x.modificationProof("yuzu (0)");
 
-  console.log(actual.toString());
+  // console.log(JSON.stringify(x));
 
   expect(actual.toString()).toStrictEqual(JSON.stringify(expected));
 });

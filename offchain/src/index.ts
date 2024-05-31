@@ -8,14 +8,14 @@ type Side = "left" | "right";
 
 class MerkleProof {
   startingSide: Side | undefined;
-  remainingProofs: [Uint8Array, number, Side][];
   leftLeaf: Uint8Array | undefined;
   rightLeaf: Uint8Array | undefined;
   leftProofs: [Uint8Array, number][];
   rightProofs: [Uint8Array, number][];
   continuingSideProofs: [Uint8Array, number][];
-  intersectingHeight: number | undefined;
+  remainingProofs: [Uint8Array, number, Side][];
   leftRightHeight: number | undefined;
+  intersectingHeight: number | undefined;
 
   constructor() {
     this.remainingProofs = [];
@@ -55,11 +55,6 @@ class MerkleProof {
   toString() {
     const x = {
       startingSide: this.startingSide,
-      remainingProofs: this.remainingProofs.map((x) => [
-        Buffer.from(x[0]).toString("hex"),
-        x[1],
-        x[2],
-      ]),
       leftLeaf: this.leftLeaf
         ? Buffer.from(this.leftLeaf).toString("hex")
         : undefined,
@@ -78,8 +73,13 @@ class MerkleProof {
         Buffer.from(x[0]).toString("hex"),
         x[1],
       ]),
-      intersectingHeight: this.intersectingHeight,
+      remainingProofs: this.remainingProofs.map((x) => [
+        Buffer.from(x[0]).toString("hex"),
+        x[1],
+        x[2],
+      ]),
       leftRightHeight: this.leftRightHeight,
+      intersectingHeight: this.intersectingHeight,
     };
     return JSON.stringify(x);
   }
@@ -486,7 +486,7 @@ export class Branch {
         typeof mutProof.rightLeaf === "undefined"
       ) {
         mutProof.insertContinuingSideProof(
-          this.rightChild.getHash(),
+          this.leftChild.getHash(),
           this.height
         );
       } else {
