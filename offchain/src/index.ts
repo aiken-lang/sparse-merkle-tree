@@ -6,6 +6,85 @@ const leafBytes = new Uint8Array(Buffer.from("0deeffaad07783", "hex"));
 
 type Side = "left" | "right";
 
+class MerkleProof {
+  startingSide: Side | undefined;
+  remainingProofs: [Uint8Array, number, Side][];
+  leftLeaf: Uint8Array | undefined;
+  rightLeaf: Uint8Array | undefined;
+  leftProofs: [Uint8Array, number][];
+  rightProofs: [Uint8Array, number][];
+  continuingSideProofs: [Uint8Array, number][];
+  intersectingHeight: number | undefined;
+  leftRightHeight: number | undefined;
+
+  constructor() {
+    this.remainingProofs = [];
+    this.leftProofs = [];
+    this.rightProofs = [];
+    this.continuingSideProofs = [];
+  }
+
+  insertRemainingProof(
+    hash: Uint8Array,
+    height: number,
+    side: Side
+  ): MerkleProof {
+    this.remainingProofs.push([hash, height, side]);
+
+    return this;
+  }
+
+  insertLeftProof(hash: Uint8Array, height: number): MerkleProof {
+    this.leftProofs.push([hash, height]);
+
+    return this;
+  }
+
+  insertRightProof(hash: Uint8Array, height: number): MerkleProof {
+    this.rightProofs.push([hash, height]);
+
+    return this;
+  }
+
+  insertContinuingSideProof(hash: Uint8Array, height: number): MerkleProof {
+    this.continuingSideProofs.push([hash, height]);
+
+    return this;
+  }
+
+  toString() {
+    const x = {
+      startingSide: this.startingSide,
+      remainingProofs: this.remainingProofs.map((x) => [
+        Buffer.from(x[0]).toString("hex"),
+        x[1],
+        x[2],
+      ]),
+      leftLeaf: this.leftLeaf
+        ? Buffer.from(this.leftLeaf).toString("hex")
+        : undefined,
+      rightLeaf: this.rightLeaf
+        ? Buffer.from(this.rightLeaf).toString("hex")
+        : undefined,
+      leftProofs: this.leftProofs.map((x) => [
+        Buffer.from(x[0]).toString("hex"),
+        x[1],
+      ]),
+      rightProofs: this.rightProofs.map((x) => [
+        Buffer.from(x[0]).toString("hex"),
+        x[1],
+      ]),
+      continuingSideProofs: this.continuingSideProofs.map((x) => [
+        Buffer.from(x[0]).toString("hex"),
+        x[1],
+      ]),
+      intersectingHeight: this.intersectingHeight,
+      leftRightHeight: this.leftRightHeight,
+    };
+    return JSON.stringify(x);
+  }
+}
+
 export class Leaf {
   key: BitSet;
   value: Uint8Array;
@@ -58,16 +137,16 @@ export class Leaf {
     }
   }
 
-  doMerkeProof(_key: BitSet): [Uint8Array, number, Side][] {
-    return [[blake2b(this.value, undefined, 32), 0, "left"]];
+  doMerkeProof(_key: BitSet, _mutProof: MerkleProof): MerkleProof {
+    throw new Error("Not possible");
   }
 
-  traverseLeft(): [Uint8Array, number, Side][] {
-    return [[blake2b(this.value, undefined, 32), 0, "left"]];
+  traverseLeft(mutProof: MerkleProof) {
+    mutProof.rightLeaf = blake2b(this.value, undefined, 32);
   }
 
-  traverseRight(): [Uint8Array, number, Side][] {
-    return [[blake2b(this.value, undefined, 32), 0, "right"]];
+  traverseRight(mutProof: MerkleProof) {
+    mutProof.leftLeaf = blake2b(this.value, undefined, 32);
   }
 
   static boundaryLeaf(isMin: boolean) {
@@ -286,7 +365,7 @@ export class Branch {
     }
   }
 
-  doMerkeProof(key: BitSet): [Uint8Array, number, Side][] {
+  doMerkeProof(key: BitSet, mutProof: MerkleProof) {
     let leftHeight = this.height - 1;
 
     if (this.leftChild instanceof Leaf) {
@@ -354,36 +433,80 @@ export class Branch {
     }
 
     if (key.equals(this.leftChild.key)) {
-      return this.rightChild.traverseLeft();
+      mutProof.intersectingHeight = this.height;
+      mutProof.startingSide = "right";
+      this.rightChild.traverseLeft(mutProof);
+
+      return;
     } else if (key.equals(this.rightChild.key)) {
-      return this.leftChild.traverseRight();
+      mutProof.intersectingHeight = this.height;
+      mutProof.startingSide = "left";
+      this.leftChild.traverseRight(mutProof);
+      return;
     } else if (leftHeight >= 0 && rightHeight < 0) {
-      return [
-        [this.rightChild.getHash(), this.height, "right"],
-        ...this.leftChild.doMerkeProof(key),
-      ];
+      this.leftChild.doMerkeProof(key, mutProof);
+
+      if (
+        mutProof.startingSide === "left" &&
+        typeof mutProof.rightLeaf === "undefined"
+      ) {
+        this.rightChild.traverseLeft(mutProof);
+      } else if (
+        mutProof.startingSide === "right" &&
+        typeof mutProof.leftLeaf === "undefined"
+      ) {
+        mutProof.insertContinuingSideProof(
+          this.rightChild.getHash(),
+          this.height
+        );
+      } else {
+        mutProof.insertRemainingProof(
+          this.rightChild.getHash(),
+          this.height,
+          "right"
+        );
+      }
+      return;
     } else if (leftHeight < 0 && rightHeight >= 0) {
-      return [
-        [this.leftChild.getHash(), this.height, "left"],
-        ...this.rightChild.doMerkeProof(key),
-      ];
+      this.rightChild.doMerkeProof(key, mutProof);
+
+      if (
+        mutProof.startingSide === "right" &&
+        typeof mutProof.leftLeaf === "undefined"
+      ) {
+        this.leftChild.traverseRight(mutProof);
+      } else if (
+        mutProof.startingSide === "left" &&
+        typeof mutProof.rightLeaf === "undefined"
+      ) {
+        mutProof.insertContinuingSideProof(
+          this.rightChild.getHash(),
+          this.height
+        );
+      } else {
+        mutProof.insertRemainingProof(
+          this.leftChild.getHash(),
+          this.height,
+          "left"
+        );
+      }
+
+      return;
     } else {
       throw new Error("Impossible");
     }
   }
 
-  traverseLeft(): [Uint8Array, number, Side][] {
-    return [
-      [this.rightChild.getHash(), this.height, "right"],
-      ...this.leftChild.traverseLeft(),
-    ];
+  traverseLeft(mutProof: MerkleProof) {
+    this.leftChild.traverseLeft(mutProof);
+
+    mutProof.insertRightProof(this.rightChild.getHash(), this.height);
   }
 
-  traverseRight(): [Uint8Array, number, Side][] {
-    return [
-      [this.leftChild.getHash(), this.height, "left"],
-      ...this.rightChild.traverseRight(),
-    ];
+  traverseRight(mutProof: MerkleProof) {
+    this.rightChild.traverseRight(mutProof);
+
+    mutProof.insertLeftProof(this.leftChild.getHash(), this.height);
   }
 }
 
@@ -420,8 +543,10 @@ export class SparseMerkleTree extends Branch {
       Buffer.from(blake2b(bufferValue, undefined, 32)).reverse()
     );
 
-    let proofArray = super.doMerkeProof(initialKey);
+    let merkleProof = new MerkleProof();
 
-    return proofArray;
+    super.doMerkeProof(initialKey, merkleProof);
+
+    return merkleProof;
   }
 }

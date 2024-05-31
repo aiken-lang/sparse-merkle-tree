@@ -91,9 +91,14 @@ test("Test 2", () => {
   x.insert("durian (0)");
   x.insert("fig (0)");
   x.insert("grape (110606)");
+
+  const thing1 = x.merkleProof("grape (110606)");
+
+  console.log(thing1.toString(), "\n\n");
+
   x.insert("grapefruit (0)");
 
   const thing = x.merkleProof("grapefruit (0)");
 
-  console.log(thing);
+  console.log(thing.toString());
 });
