@@ -3,6 +3,39 @@ import { Buffer } from "buffer";
 
 import { SparseMerkleTree } from "./index.js";
 
+const fruits = [
+  "apple (0)",
+  "apricot (0)",
+  "banana (328)",
+  "blackberry (0)",
+  "blueberry (92383)",
+  "cherry (0)",
+  "coconut (0)",
+  "cranberry (0)",
+  "durian (0)",
+  "fig (0)",
+  "grape (110606)",
+  "grapefruit (0)",
+  "guava (0)",
+  "kiwi (0)",
+  "kumquat (0)",
+  "lemon (37694)",
+  "lime (0)",
+  "mango (0)",
+  "orange (36703)",
+  "papaya (0)",
+  "passionfruit (0)",
+  "peach (0)",
+  "pear (0)",
+  "pineapple (0)",
+  "plum (0)",
+  "pomegranate (113)",
+  "raspberry (0)",
+  "strawberry (0)",
+  "watermelon (20)",
+  "yuzu (0)",
+];
+
 test("Test Insert", () => {
   const x = new SparseMerkleTree();
   let rootList = [x.branchHash];
@@ -22,53 +55,10 @@ test("Test Insert", () => {
     "92cc9d3ed08668c5d71243ccac72b76b46c924e5cee13583665a13920b244e23",
   ];
 
-  x.insert("apple (0)");
-
-  rootList.push(x.branchHash);
-
-  x.insert("apricot (0)");
-
-  rootList.push(x.branchHash);
-
-  x.insert("banana (328)");
-
-  rootList.push(x.branchHash);
-
-  x.insert("blackberry (0)");
-
-  rootList.push(x.branchHash);
-
-  x.insert("blueberry (92383)");
-
-  rootList.push(x.branchHash);
-
-  x.insert("cherry (0)");
-
-  rootList.push(x.branchHash);
-
-  x.insert("coconut (0)");
-
-  rootList.push(x.branchHash);
-
-  x.insert("cranberry (0)");
-
-  rootList.push(x.branchHash);
-
-  x.insert("durian (0)");
-
-  rootList.push(x.branchHash);
-
-  x.insert("fig (0)");
-
-  rootList.push(x.branchHash);
-
-  x.insert("grape (110606)");
-
-  rootList.push(x.branchHash);
-
-  x.insert("grapefruit (0)");
-
-  rootList.push(x.branchHash);
+  fruits.slice(0, 12).forEach((fruit) => {
+    x.insert(fruit);
+    rootList.push(x.branchHash);
+  });
 
   expect(rootList.map((x) => Buffer.from(x).toString("hex"))).toStrictEqual(
     expectedList
@@ -80,23 +70,10 @@ test("Test Modification Proof", () => {
   let rootList: Uint8Array[] = [];
   const expectedList: string[] = [];
 
-  x.insert("apple (0)");
-  x.insert("apricot (0)");
-  x.insert("banana (328)");
-  x.insert("blackberry (0)");
-  x.insert("blueberry (92383)");
-  x.insert("cherry (0)");
-  x.insert("coconut (0)");
-  x.insert("cranberry (0)");
-  x.insert("durian (0)");
-  x.insert("fig (0)");
-  x.insert("grape (110606)");
-
-  const other = x.modificationProof("grape (110606)");
-
-  console.log(other.toString(), "\n\n");
-
-  x.insert("grapefruit (0)");
+  fruits.slice(0, 12).forEach((fruit) => {
+    x.insert(fruit);
+    rootList.push(x.branchHash);
+  });
 
   const expected = {
     startingSide: "left",
@@ -150,4 +127,78 @@ test("Test Member Proof", () => {
   const thing = x.memberProof("grapefruit (0)");
 
   console.log(thing);
+});
+
+test("Test Modification Proof2", () => {
+  const x = new SparseMerkleTree();
+  let rootList: Uint8Array[] = [];
+
+  fruits.slice(0, 15).forEach((fruit) => {
+    x.insert(fruit);
+    console.log(fruit);
+    rootList.push(x.branchHash);
+  });
+
+  console.log(rootList.map((x) => Buffer.from(x).toString("hex")));
+
+  const a = {
+    startingSide: "left",
+    remainingProofs: [
+      [
+        "dbb028d68f52c20d4055736b69101407d2aefa8d09e9bb7e3ea49f649a6155d3",
+        251,
+        "left",
+      ],
+      [
+        "ad29ecde0090b8b3098d28675be169f0feda70139ea1dd2c3470620036e01ed7",
+        254,
+        "right",
+      ],
+      [
+        "ef4267ae7f358032de7a4b03a94e0053c8b2053f7f3192b2d4d3b3de58311177",
+        255,
+        "left",
+      ],
+    ],
+    leftLeaf:
+      "a909ba8699e34f8a78bacd04266b57f36ff3a758b93c0c31b0aaa18ba0be1e87",
+    rightLeaf:
+      "af7cd63fd75f935961ba7048b7f81244366198bd43fa60dfc43195a61507b859",
+    leftProofs: [],
+    rightProofs: [],
+    continuingSideProofs: [],
+    intersectingHeight: 249,
+    leftRightHeight: 250,
+  };
+
+  const expected = {
+    startingSide: "left",
+    remainingProofs: [
+      [
+        "4ade9ca0cbd69b8322a0744fa751b4d4a91a280e4945ba5874a0c3fbfe76524d",
+        255,
+        "left",
+      ],
+    ],
+    leftLeaf:
+      "ba830de32503d8941eee8b8689332e8903841663d99c4442434858b1a147da75",
+    rightLeaf:
+      "c85531ce450e18f357f214ca0ef1f2bac4a010a1af5af81ddebf137608c5aad3",
+    leftProofs: [],
+    rightProofs: [
+      ["0a45855e42b616c2ab268fb6419f821c68634637380683d0c894216f83ad6ef4", 253],
+    ],
+    continuingSideProofs: [
+      ["7bd9009653a1b6d1751b961be9204676d501614fe438f61e3ccf689ece1b5b65", 252],
+      ["61a457f71e181ddf47baddd3abdcca35e2b25472c17b11871d41966e69bb4bfb", 253],
+    ],
+    leftRightHeight: 254,
+    intersectingHeight: 250,
+  };
+
+  const actual = x.modificationProof("kumquat (0)");
+
+  console.log(actual.toString());
+
+  expect(actual.toString()).toStrictEqual(JSON.stringify(expected));
 });
