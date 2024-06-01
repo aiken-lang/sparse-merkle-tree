@@ -1,5 +1,6 @@
 use aiken/builtin
 use aiken/bytearray
+use aiken/cbor
 use aiken/hash
 use aiken/sparse_merkle_tree/consts.{merkle_lower_bound, merkle_upper_bound}
 use aiken/sparse_merkle_tree/merkle_blake256.{
@@ -705,6 +706,70 @@ test sparse_merkle_proof_x() {
       left_right_intersection: 254,
       intersecting_level: 250,
     }
+
+  let actual_root = add_member(member, data_serializer, proof_block, old_root)
+
+  expected_root == actual_root
+}
+
+test sparse_merkle_proof_bitcoin0_12() {
+  let old_root =
+    #"4aa209b47965b6a849953779938173f05bacde1df715368e343a4378331f00a1"
+
+  let expected_root =
+    #"e1f31529b8c64f911ac0e974b61dc75a02df85f8e82e9aaaab391d4f808b0e2f"
+
+  // #"e76950a269b0c113c531238aa57b2271b9a6b1006ef36b6ec29289c385a45e91"
+  let member =
+    #"0000000097be56d606cdd9c54b04d4747e957d3608abe69198c661f2add73073"
+
+  let data_serializer = identity
+
+  let proof_block =
+    MerkleProofBlock {
+      left_leaf: #"d4021488c039595fcb330d4d4670fb038747e98e02f2eaed3a8ef1b21dc31620",
+      right_leaf: #"ebb7a5b9485ebf3d53a9346b79ef0b2421871299f36d71e00c1dd19a02f70272",
+      left_proofs: #"d573180cc035518928c70571a35eb961685197fd1e4c0567dacfd4460615fa8bfc",
+      right_proofs: #"fab66272e4e204d0670fc0b75effbd3e2e3323da698ba22d80dbb082beacd0e5b0",
+      continuing_side_proofs: #"fcc66d906756f4d29c2f34819e5d6505b48e73524f5f259a03d1f27d4710c7cdbc",
+      remaining_proofs: #"00c685d33527ad2dcf8b6450498ef57fddb840c787c50d234e349e7ca50d71b549fe00e388b5fe613ee6ae037be1b0625fbf6f6624beb98e6b58bd3482c9c4294797b5ff",
+      left_right_intersection: 253,
+      intersecting_level: 251,
+    }
+
+  let actual_root = add_member(member, data_serializer, proof_block, old_root)
+
+  expected_root == actual_root
+}
+
+test sparse_merkle_proof_bitcoin20k() {
+  let old_root =
+    #"0c2335d5b6cb0b8c822ab73c59c5dcc5d75b697be2329ed9e1e348ef5328e83d"
+
+  let expected_root =
+    #"d429b065ba94985ca9b3abf6299a5cba81add0c90aa15a26e136d7140cabe1d8"
+
+  // #"bc1daccbad8a5820b976a217c0ff3ef8b29ede6553cae4090356ffebf1dd7cf8"
+  let member =
+    #"00000000ba36eb929dc90170a96ee3efb76cbebee0e0e5c4da9eb0b6e74d9124"
+
+  let data_serializer = identity
+
+  let proof_block =
+    MerkleProofBlock {
+      left_leaf: #"bc1ca0cbcf9925bb28b1b5ae1f34db929c98ff7880e4c272c5aa27a9fee76fe1",
+      right_leaf: #"bc22334d33a3839a9dac95bf25735406af5f02f95ae132360ab301891b1cfb6c",
+      left_proofs: #"",
+      right_proofs: #"f3da4ee37dfdf3c42bdfd0a6e9a82a9a5385a10ec3ea00144bc3c5ae60ec6a44eef4aacffe9e203b017d02a84f0f85f7d08f09a58a30cac39852f8fa5fb43a408bea",
+      continuing_side_proofs: #"d9a1b49e8bfd5078a0650070e262285204982deb602b5ab539771b730b6d6ee1f31eca8e2d3903bed86dc27e88456655020b15aab17b175e3ebaeda94d3c8b085ff4",
+      remaining_proofs: #"01f626bbffdd6cc91ab105c2a76b58b17697a51d938ea16b930e8c577a13aa467bb001f7d9dfca90ee9916311dc85cca454bcbbb28dec8de2e4d4fcdac5ec0159e9a998401f8f3904d9be863ff4fee423cb8e08f29111299c9a7717549e875e265a659cf5a2c01f9ae59d09a8003fe3b62547c95454e9b268b15cedec3d4060d2e5eb3364e9c10e20062ab74209c26d3ee8add422ebb3e97d16b8f76a014c149482c6ceb2665c10b65fa0037055c548a34c5480c73299f2f20af25a76f583e5b6b893e7955a8df22d58c3bfb0042216e091635d737f234822cd386edc12a8243773716126f891fe0e4a60ca652fc0062ffd39cbe7e6999bfd221067038f42456c3560c0db1d53c759372896cc54504fd01fe766c637a5b6a2665d2f1af04ef1ea57e6039620604c2f42a6726085361a3c43300b4442d490c6c35e3f98f5766bb9b56f69cca2c9f459333551f60cfd898aace0aff",
+      left_right_intersection: 245,
+      intersecting_level: 240,
+    }
+
+  trace cbor.diagnostic(
+    builtin.length_of_bytearray(builtin.serialise_data(proof_block)),
+  )
 
   let actual_root = add_member(member, data_serializer, proof_block, old_root)
 
