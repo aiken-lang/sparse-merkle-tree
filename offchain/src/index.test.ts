@@ -239,16 +239,6 @@ test("Test Modification Proof4", () => {
       rootList.push(x.branchHash);
     });
 
-  headerHashes
-    .slice(0, 20000)
-    .slice(-2)
-    .forEach((headerHash: { hash: string; merkleroot: string }) => {
-      console.log(headerHash.hash);
-      console.log(
-        blake2bHex(Buffer.from(headerHash.hash, "hex"), undefined, 32)
-      );
-    });
-
   const expected = {
     startingSide: "left",
     leftLeaf:
@@ -327,40 +317,444 @@ test("Test Modification Proof4", () => {
     )
   );
 
-  const aaaa = {
-    startingSide: "left",
+  expect(actual.toString()).toStrictEqual(JSON.stringify(expected));
+});
+
+test("Test Modification Proof5", () => {
+  const x = new SparseMerkleTree();
+  let rootList: Uint8Array[] = [];
+
+  const headerHashes = JSON.parse(fs.readFileSync("combined.json", "utf8"));
+
+  headerHashes
+    .slice(0, 50000)
+    .forEach((headerHash: { hash: string; merkleroot: string }) => {
+      x.insert(Buffer.from(headerHash.hash, "hex"));
+      rootList.push(x.branchHash);
+    });
+
+  headerHashes
+    .slice(0, 50000)
+    .slice(-2)
+    .forEach((headerHash: { hash: string; merkleroot: string }) => {
+      console.log(headerHash.hash);
+      console.log(
+        blake2bHex(Buffer.from(headerHash.hash, "hex"), undefined, 32)
+      );
+    });
+
+  const expected = {
+    startingSide: "right",
     leftLeaf:
-      "bc1ca0cbcf9925bb28b1b5ae1f34db929c98ff7880e4c272c5aa27a9fee76fe1",
+      "57db583bfd56b6ed83cbb2aad4b70d2ecc6ce691d16ce745fe1d0f99d1ab5fbf",
     rightLeaf:
-      "bc22334d33a3839a9dac95bf25735406af5f02f95ae132360ab301891b1cfb6c",
-    leftProofs: [],
+      "57df21077ec27c7bf58f1632cdc838e984ca3f793d15751a778e4edd4db92707",
+    leftProofs: [
+      ["a1a0dbb452b960f2a92c2356254e79900ea66eba6841d22f784cda43bb42edd8", 238],
+      ["5da061a1d57213c16d1c02908af56680d0818c55994ca6ef412c410d6aa23f14", 240],
+      ["486b9c7906b1f040e7debd938da602e7721cc23a1da7f787dd09ba5bb2f944d2", 241],
+    ],
     rightProofs: [
-      "f3da4ee37dfdf3c42bdfd0a6e9a82a9a5385a10ec3ea00144bc3c5ae60ec6a44ee",
-      "f4aacffe9e203b017d02a84f0f85f7d08f09a58a30cac39852f8fa5fb43a408bea",
+      ["8d09abdb04c35ac5ca961bcf0dee1bd63208de8741786dff63d3529f0be05edf", 239],
     ],
-    continuingSideProofs: [
-      "d9a1b49e8bfd5078a0650070e262285204982deb602b5ab539771b730b6d6ee1f3",
-      "1eca8e2d3903bed86dc27e88456655020b15aab17b175e3ebaeda94d3c8b085ff4",
-    ],
+    continuingSideProofs: [],
     remainingProofs: [
-      "01f626bbffdd6cc91ab105c2a76b58b17697a51d938ea16b930e8c577a13aa467bb0",
-      "01f7d9dfca90ee9916311dc85cca454bcbbb28dec8de2e4d4fcdac5ec0159e9a9984",
-      "01f8f3904d9be863ff4fee423cb8e08f29111299c9a7717549e875e265a659cf5a2c",
-      "01f9ae59d09a8003fe3b62547c95454e9b268b15cedec3d4060d2e5eb3364e9c10e2",
-      "0062ab74209c26d3ee8add422ebb3e97d16b8f76a014c149482c6ceb2665c10b65fa",
-      "0037055c548a34c5480c73299f2f20af25a76f583e5b6b893e7955a8df22d58c3bfb",
-      "0042216e091635d737f234822cd386edc12a8243773716126f891fe0e4a60ca652fc",
-      "0062ffd39cbe7e6999bfd221067038f42456c3560c0db1d53c759372896cc54504fd",
-      "01fe766c637a5b6a2665d2f1af04ef1ea57e6039620604c2f42a6726085361a3c433",
-      "00b4442d490c6c35e3f98f5766bb9b56f69cca2c9f459333551f60cfd898aace0aff",
+      [
+        "5acfd366a9fe5d2197aaef88b329de066ab7b18955290b8892342e35772bb6ed",
+        243,
+        "left",
+      ],
+      [
+        "4ec73e5e55bf895ae674cd1212c5c1f88e77381c3197900563226af85751739b",
+        244,
+        "left",
+      ],
+      [
+        "570d47de125137281e38951d8f17fd52a2c727dd9a6f68a5ef0ab05815e0a91b",
+        245,
+        "right",
+      ],
+      [
+        "df274cc145f0700ec9959aa2d566d2d7fb80efa1bb945e9efe553e1abf4c90f7",
+        246,
+        "left",
+      ],
+      [
+        "9d52f54dd3cf7409112539e6ad264a51b9e14fdd63310debf18fa7277250ece0",
+        247,
+        "left",
+      ],
+      [
+        "eab3d7c485dd7c698ce6d7190723e3885087002547d287acbe9187b1770a3140",
+        248,
+        "left",
+      ],
+      [
+        "15a78db8eb8f3879a28f61d40f043cd6c7f77afc279070fac74189f6f4992afb",
+        249,
+        "left",
+      ],
+      [
+        "67672a386b3b20f9ee156a43a368f1a5cbdf88644c0770db02d67478303c4f41",
+        250,
+        "left",
+      ],
+      [
+        "b4e93db8bfb415c33ffafb6a243546d3df6530d82ac637658cb5acbbc24997e8",
+        251,
+        "right",
+      ],
+      [
+        "05266e1e4b78e077cacea88d4ead56d879eee0557bde1212c8486ccb173b13d2",
+        252,
+        "left",
+      ],
+      [
+        "409d13ae10079e23050258d62bc6be752ae4a68c1cf50e84f5807c8b7acca563",
+        253,
+        "right",
+      ],
+      [
+        "c691e6ce4be8bd9d5e777c582a7fd51b31c41896bab603481ef66856f4128636",
+        254,
+        "left",
+      ],
+      [
+        "af14d25ad97e48d5cb2559b4bf4b1eab08b55b2bc9e674211b88618672882970",
+        255,
+        "right",
+      ],
     ],
-    leftRightHeight: 245,
-    intersectingHeight: 240,
+    leftRightHeight: 242,
+    intersectingHeight: 241,
   };
+
+  const actual = x.modificationProof(
+    Buffer.from(
+      "0000000007db79e3b3c9575767f2e142565d5b120580d0c80844af75d38e6c6f",
+      "hex"
+    )
+  );
 
   console.log(actual.toStringProof());
 
   console.log(rootList.slice(-2).map((x) => Buffer.from(x).toString("hex")));
+
+  expect(actual.toString()).toStrictEqual(JSON.stringify(expected));
+});
+
+test("Test Modification Proof6", () => {
+  const x = new SparseMerkleTree();
+  let rootList: Uint8Array[] = [];
+
+  const headerHashes = JSON.parse(fs.readFileSync("combined.json", "utf8"));
+
+  headerHashes
+    .slice(0, 200000)
+    .forEach((headerHash: { hash: string; merkleroot: string }) => {
+      x.insert(Buffer.from(headerHash.hash, "hex"));
+      rootList.push(x.branchHash);
+    });
+
+  headerHashes
+    .slice(0, 200000)
+    .slice(-2)
+    .forEach((headerHash: { hash: string; merkleroot: string }) => {
+      console.log(headerHash.hash);
+      console.log(
+        blake2bHex(Buffer.from(headerHash.hash, "hex"), undefined, 32)
+      );
+    });
+
+  const expected = {
+    startingSide: "right",
+    leftLeaf:
+      "59aa493eeff81348598647d1355dd4b40d841801b191b06b0a8c8b0e2532d095",
+    rightLeaf:
+      "59ab5a76d8b506cc0c1e0b72051b1ac87651db0ec083dbd66852c985ba91505e",
+    leftProofs: [],
+    rightProofs: [],
+    continuingSideProofs: [
+      ["937186e1bde24cb3bb599a21037ea19746f1f79f444aa1eaf66479f0237418e9", 239],
+    ],
+    remainingProofs: [
+      [
+        "18d9198dea65915c093c607a6478f38b0dcf74b16d849293cece08dd0a3830a6",
+        241,
+        "left",
+      ],
+      [
+        "d32ebc686999824ddd4ad92433d36b86bbf75b44846a76667454c87f2a102432",
+        242,
+        "right",
+      ],
+      [
+        "1f673a231083de873c715efd84bc7b5ecbac390a7341949fde5072817e8176d3",
+        243,
+        "left",
+      ],
+      [
+        "26124666b1fa08638c52557d5af63408676b14910135d498f906fa5b1dd95cfe",
+        244,
+        "right",
+      ],
+      [
+        "a29774309b6c842bc22355ad3834fcff9e5e59467a89db008965504a7c9b09d0",
+        245,
+        "left",
+      ],
+      [
+        "ea1f315673ff81ec6ab824e1b14ebe4714d0a041525aa35ed9e96f5fcde34d39",
+        246,
+        "right",
+      ],
+      [
+        "2b9c25c23127a4c6a390b244dd97cb668ae72288bbfed45274d9bcb982431ae5",
+        247,
+        "left",
+      ],
+      [
+        "d7303ea6f00c4c962a9dfab3990c96418357801cdeb8e6f5c9a7866261a8c076",
+        248,
+        "left",
+      ],
+      [
+        "92b9a733701dd1649421ba99c117990f1a826f9d667cb122fc59b9c75c1d5e0a",
+        249,
+        "right",
+      ],
+      [
+        "a911b5813c4401c95e2e557def47ac0708a318ef3d7becb2e0f5e16a0ff63a05",
+        250,
+        "right",
+      ],
+      [
+        "7e9e7322b24c5f0359e22b4e4bcf2d99c286340dce488665a620f7897f5ee7e6",
+        251,
+        "left",
+      ],
+      [
+        "2e86e68c0a5de6c9ff799a2427c78e41632afc7f79a199256aaf2c00eb3e0063",
+        252,
+        "left",
+      ],
+      [
+        "a3e1be0e3fb3d814f0a150f3877fbcb990cf27c3c5cc6037ac5887d1144de4d3",
+        253,
+        "right",
+      ],
+      [
+        "26b3e9f20d98eadc1687d5e2b054e7447ba7f24193a68d1d7950ae0e2ea443f7",
+        254,
+        "left",
+      ],
+      [
+        "92580d8a2f251909e1cc70bc54da0fcb37962b04d7e7c101a0e4f365b1921a26",
+        255,
+        "right",
+      ],
+    ],
+    leftRightHeight: 240,
+    intersectingHeight: 238,
+  };
+
+  const actual = x.modificationProof(
+    Buffer.from(
+      "0000000000000553828611e5ead40e4d153f09557573bf89dc637b9880859789",
+      "hex"
+    )
+  );
+
+  console.log(actual.toStringProof());
+
+  console.log(rootList.slice(-2).map((x) => Buffer.from(x).toString("hex")));
+
+  const aas = {
+    startingSide: "right",
+    leftLeaf:
+      "59aa493eeff81348598647d1355dd4b40d841801b191b06b0a8c8b0e2532d095",
+    rightLeaf:
+      "59ab5a76d8b506cc0c1e0b72051b1ac87651db0ec083dbd66852c985ba91505e",
+    leftProofs: "",
+    rightProofs: "",
+    continuingSideProofs:
+      "ef937186e1bde24cb3bb599a21037ea19746f1f79f444aa1eaf66479f0237418e9",
+    remainingProofs:
+      "0018d9198dea65915c093c607a6478f38b0dcf74b16d849293cece08dd0a3830a6f101f2d32ebc686999824ddd4ad92433d36b86bbf75b44846a76667454c87f2a102432001f673a231083de873c715efd84bc7b5ecbac390a7341949fde5072817e8176d3f301f426124666b1fa08638c52557d5af63408676b14910135d498f906fa5b1dd95cfe00a29774309b6c842bc22355ad3834fcff9e5e59467a89db008965504a7c9b09d0f501f6ea1f315673ff81ec6ab824e1b14ebe4714d0a041525aa35ed9e96f5fcde34d39002b9c25c23127a4c6a390b244dd97cb668ae72288bbfed45274d9bcb982431ae5f700d7303ea6f00c4c962a9dfab3990c96418357801cdeb8e6f5c9a7866261a8c076f801f992b9a733701dd1649421ba99c117990f1a826f9d667cb122fc59b9c75c1d5e0a01faa911b5813c4401c95e2e557def47ac0708a318ef3d7becb2e0f5e16a0ff63a05007e9e7322b24c5f0359e22b4e4bcf2d99c286340dce488665a620f7897f5ee7e6fb002e86e68c0a5de6c9ff799a2427c78e41632afc7f79a199256aaf2c00eb3e0063fc01fda3e1be0e3fb3d814f0a150f3877fbcb990cf27c3c5cc6037ac5887d1144de4d30026b3e9f20d98eadc1687d5e2b054e7447ba7f24193a68d1d7950ae0e2ea443f7fe01ff92580d8a2f251909e1cc70bc54da0fcb37962b04d7e7c101a0e4f365b1921a26",
+    leftRightHeight: 240,
+    intersectingHeight: 238,
+  };
+
+  expect(actual.toString()).toStrictEqual(JSON.stringify(expected));
+});
+
+test("Test Modification Proof7", () => {
+  const x = new SparseMerkleTree();
+  let rootList: Uint8Array[] = [];
+
+  const headerHashes = JSON.parse(fs.readFileSync("combined.json", "utf8"));
+
+  headerHashes
+    .slice(0, 800000)
+    .forEach((headerHash: { hash: string; merkleroot: string }) => {
+      x.insert(Buffer.from(headerHash.hash, "hex"));
+      rootList.push(x.branchHash);
+    });
+
+  headerHashes
+    .slice(0, 800000)
+    .slice(-2)
+    .forEach((headerHash: { hash: string; merkleroot: string }) => {
+      console.log(headerHash.hash);
+      console.log(
+        blake2bHex(Buffer.from(headerHash.hash, "hex"), undefined, 32)
+      );
+    });
+
+  const expected = {
+    startingSide: "left",
+    leftLeaf:
+      "4d944b2d33ac3242a864bbfc70eab8a8c1531cb0cff26d02398f26ca95132b6a",
+    rightLeaf:
+      "4d9453605d145d468b35527442eaca3407702da892361cc383fdc65807b3c921",
+    leftProofs: [
+      ["be6958d13960863e9d34f789453f13e8f999aae3077f8bd221eb443900f50656", 232],
+    ],
+    rightProofs: [
+      ["6f09f86ac9464567a82521a4d117d78f2f30f1f13d213039b3c34ad1063a3c33", 234],
+    ],
+    continuingSideProofs: [
+      ["4b795c9b28cdc81d3d80e2c998628b0d2ebb7ca90bac8858e953540b1dbe418a", 235],
+    ],
+    remainingProofs: [
+      [
+        "29af690b2be479e6885fcce649a53f4d7248080efdce0d9b25f39f82fb2d48b3",
+        237,
+        "right",
+      ],
+      [
+        "f8cee02011790b5e460ec687ded4a9157b924cb06b42bc32a092bac87a9fc557",
+        238,
+        "left",
+      ],
+      [
+        "8c5ff1208dcc7a67cc3aa50fd00338596651be92c53cb737c3674bd485547bdf",
+        239,
+        "right",
+      ],
+      [
+        "e91367c327c548a186d3d94b932c23dd0a0c0ac27e427f9c1b8c9a3150ca2858",
+        240,
+        "right",
+      ],
+      [
+        "fff7ee68e975d077eae8d2afde82bafad93d635fd3ea51cc2489a13b711d42ab",
+        241,
+        "right",
+      ],
+      [
+        "ed2390a084352758723d15a4a2d17fea55ea6de611211c806f94d334397769fb",
+        242,
+        "left",
+      ],
+      [
+        "7daa5b1a475e4778a6ffef1b400c452e6bc39cf8b5b8564149180d752f744314",
+        243,
+        "right",
+      ],
+      [
+        "66ac374ccc44a6eaf5e96be71133fece7ef6285ca2c028fb2569d3d8852a720e",
+        244,
+        "left",
+      ],
+      [
+        "fc6e932402c18ea51231de55ebf8310e0604be8f7944499a1d9890bf1e40cc70",
+        245,
+        "right",
+      ],
+      [
+        "9d0a161e22c7de97f93ed5e95c876ddeba207ea726a3e3f80fd2cc3ffc1ad8a4",
+        246,
+        "right",
+      ],
+      [
+        "637083cbcdd017838c67e51095e0e57eb10d56b180c21eb6c18bbb9bc6e7420f",
+        247,
+        "left",
+      ],
+      [
+        "86237bc0917775530d179e2cfca093159e48bf9ab055d19f7f4e837d9ed8dfd3",
+        248,
+        "left",
+      ],
+      [
+        "7e2d5ae9f52508c861a45394dd4c9e7e6cc3819d1e1d112405f5f52dbc4c00fc",
+        249,
+        "right",
+      ],
+      [
+        "a72dfe78d77d05310f6650aa3c0a8da9ff1051af33e4a01c0f6b9e27f1cc954e",
+        250,
+        "left",
+      ],
+      [
+        "8216de938a3846be972a9637bc437f4277d7300d2479d5702f1dd2e3ae464c3f",
+        251,
+        "left",
+      ],
+      [
+        "abf3db6deb2a007ad43ed7f58507fec40480928b5e305182660946d008ada242",
+        252,
+        "right",
+      ],
+      [
+        "1bc9696bee26ea5054fd7549203d77cd2a96768f1c22e8c3b5a555cd4f2aef60",
+        253,
+        "right",
+      ],
+      [
+        "f793c95b8a059e5c8b4e076601d4a61583fbc1a1b6944e86e13f524addad02e7",
+        254,
+        "left",
+      ],
+      [
+        "d45f5018aa3c6c2f5277146d87ce8827e44a4cfdaf888e79e1353c411adb00c0",
+        255,
+        "right",
+      ],
+    ],
+    leftRightHeight: 236,
+    intersectingHeight: 234,
+  };
+
+  const actual = x.modificationProof(
+    Buffer.from(
+      "00000000000000000004a8437dbe7995eacf42daa014088d04e5010a44e64f42",
+      "hex"
+    )
+  );
+
+  console.log(actual.toStringProof());
+
+  console.log(rootList.slice(-2).map((x) => Buffer.from(x).toString("hex")));
+
+  const aadfa = {
+    startingSide: "left",
+    leftLeaf:
+      "4d944b2d33ac3242a864bbfc70eab8a8c1531cb0cff26d02398f26ca95132b6a",
+    rightLeaf:
+      "4d9453605d145d468b35527442eaca3407702da892361cc383fdc65807b3c921",
+    leftProofs:
+      "be6958d13960863e9d34f789453f13e8f999aae3077f8bd221eb443900f50656e8",
+    rightProofs:
+      "ea6f09f86ac9464567a82521a4d117d78f2f30f1f13d213039b3c34ad1063a3c33",
+    continuingSideProofs:
+      "4b795c9b28cdc81d3d80e2c998628b0d2ebb7ca90bac8858e953540b1dbe418aeb",
+    remainingProofs:
+      "01ed29af690b2be479e6885fcce649a53f4d7248080efdce0d9b25f39f82fb2d48b300f8cee02011790b5e460ec687ded4a9157b924cb06b42bc32a092bac87a9fc557ee01ef8c5ff1208dcc7a67cc3aa50fd00338596651be92c53cb737c3674bd485547bdf01f0e91367c327c548a186d3d94b932c23dd0a0c0ac27e427f9c1b8c9a3150ca285801f1fff7ee68e975d077eae8d2afde82bafad93d635fd3ea51cc2489a13b711d42ab00ed2390a084352758723d15a4a2d17fea55ea6de611211c806f94d334397769fbf201f37daa5b1a475e4778a6ffef1b400c452e6bc39cf8b5b8564149180d752f7443140066ac374ccc44a6eaf5e96be71133fece7ef6285ca2c028fb2569d3d8852a720ef401f5fc6e932402c18ea51231de55ebf8310e0604be8f7944499a1d9890bf1e40cc7001f69d0a161e22c7de97f93ed5e95c876ddeba207ea726a3e3f80fd2cc3ffc1ad8a400637083cbcdd017838c67e51095e0e57eb10d56b180c21eb6c18bbb9bc6e7420ff70086237bc0917775530d179e2cfca093159e48bf9ab055d19f7f4e837d9ed8dfd3f801f97e2d5ae9f52508c861a45394dd4c9e7e6cc3819d1e1d112405f5f52dbc4c00fc00a72dfe78d77d05310f6650aa3c0a8da9ff1051af33e4a01c0f6b9e27f1cc954efa008216de938a3846be972a9637bc437f4277d7300d2479d5702f1dd2e3ae464c3ffb01fcabf3db6deb2a007ad43ed7f58507fec40480928b5e305182660946d008ada24201fd1bc9696bee26ea5054fd7549203d77cd2a96768f1c22e8c3b5a555cd4f2aef6000f793c95b8a059e5c8b4e076601d4a61583fbc1a1b6944e86e13f524addad02e7fe01ffd45f5018aa3c6c2f5277146d87ce8827e44a4cfdaf888e79e1353c411adb00c0",
+    leftRightHeight: 236,
+    intersectingHeight: 234,
+  };
 
   expect(actual.toString()).toStrictEqual(JSON.stringify(expected));
 });

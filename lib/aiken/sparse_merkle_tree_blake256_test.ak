@@ -775,3 +775,105 @@ test sparse_merkle_proof_bitcoin20k() {
 
   expected_root == actual_root
 }
+
+test sparse_merkle_proof_bitcoin50k() {
+  let old_root =
+    #"a63a028d53228e032fe4c268e06a35bf3242b6e3701cc50dd7e5e25c9c435da0"
+
+  let expected_root =
+    #"65d084425dc5cc341ff74f5e70508bd8c251b3a25e7e1c42bf93d25d2bdecdab"
+
+  // #"57dca36bee449657bd47e6e96c9f25f3dfebf23845eff7a2a1d4cdb08c69e41b"
+  let member =
+    #"0000000007db79e3b3c9575767f2e142565d5b120580d0c80844af75d38e6c6f"
+
+  let data_serializer = identity
+
+  let proof_block =
+    MerkleProofBlock {
+      left_leaf: #"57db583bfd56b6ed83cbb2aad4b70d2ecc6ce691d16ce745fe1d0f99d1ab5fbf",
+      right_leaf: #"57df21077ec27c7bf58f1632cdc838e984ca3f793d15751a778e4edd4db92707",
+      left_proofs: #"a1a0dbb452b960f2a92c2356254e79900ea66eba6841d22f784cda43bb42edd8ee5da061a1d57213c16d1c02908af56680d0818c55994ca6ef412c410d6aa23f14f0486b9c7906b1f040e7debd938da602e7721cc23a1da7f787dd09ba5bb2f944d2f1",
+      right_proofs: #"ef8d09abdb04c35ac5ca961bcf0dee1bd63208de8741786dff63d3529f0be05edf",
+      continuing_side_proofs: #"",
+      remaining_proofs: #"005acfd366a9fe5d2197aaef88b329de066ab7b18955290b8892342e35772bb6edf3004ec73e5e55bf895ae674cd1212c5c1f88e77381c3197900563226af85751739bf401f5570d47de125137281e38951d8f17fd52a2c727dd9a6f68a5ef0ab05815e0a91b00df274cc145f0700ec9959aa2d566d2d7fb80efa1bb945e9efe553e1abf4c90f7f6009d52f54dd3cf7409112539e6ad264a51b9e14fdd63310debf18fa7277250ece0f700eab3d7c485dd7c698ce6d7190723e3885087002547d287acbe9187b1770a3140f80015a78db8eb8f3879a28f61d40f043cd6c7f77afc279070fac74189f6f4992afbf90067672a386b3b20f9ee156a43a368f1a5cbdf88644c0770db02d67478303c4f41fa01fbb4e93db8bfb415c33ffafb6a243546d3df6530d82ac637658cb5acbbc24997e80005266e1e4b78e077cacea88d4ead56d879eee0557bde1212c8486ccb173b13d2fc01fd409d13ae10079e23050258d62bc6be752ae4a68c1cf50e84f5807c8b7acca56300c691e6ce4be8bd9d5e777c582a7fd51b31c41896bab603481ef66856f4128636fe01ffaf14d25ad97e48d5cb2559b4bf4b1eab08b55b2bc9e674211b88618672882970",
+      left_right_intersection: 242,
+      intersecting_level: 241,
+    }
+
+  trace cbor.diagnostic(
+    builtin.length_of_bytearray(builtin.serialise_data(proof_block)),
+  )
+
+  let actual_root = add_member(member, data_serializer, proof_block, old_root)
+
+  expected_root == actual_root
+}
+
+test sparse_merkle_proof_bitcoin200k() {
+  let old_root =
+    #"d5ac79f3334f8a345207c27f1d8e7a356bb1e7546888531bddf7035ed8e8b052"
+
+  let expected_root =
+    #"1ff9ea65f1ac88a53e890fd952d70b8f0690c1a261d6133b269c812a4a91c926"
+
+  // #"59ab0deba7e873d3491dc58ab24a93892f0fc58dd5757c11c66dd9443996b88f"
+  let member =
+    #"0000000000000553828611e5ead40e4d153f09557573bf89dc637b9880859789"
+
+  let data_serializer = identity
+
+  let proof_block =
+    MerkleProofBlock {
+      left_leaf: #"59aa493eeff81348598647d1355dd4b40d841801b191b06b0a8c8b0e2532d095",
+      right_leaf: #"59ab5a76d8b506cc0c1e0b72051b1ac87651db0ec083dbd66852c985ba91505e",
+      left_proofs: #"",
+      right_proofs: #"",
+      continuing_side_proofs: #"ef937186e1bde24cb3bb599a21037ea19746f1f79f444aa1eaf66479f0237418e9",
+      remaining_proofs: #"0018d9198dea65915c093c607a6478f38b0dcf74b16d849293cece08dd0a3830a6f101f2d32ebc686999824ddd4ad92433d36b86bbf75b44846a76667454c87f2a102432001f673a231083de873c715efd84bc7b5ecbac390a7341949fde5072817e8176d3f301f426124666b1fa08638c52557d5af63408676b14910135d498f906fa5b1dd95cfe00a29774309b6c842bc22355ad3834fcff9e5e59467a89db008965504a7c9b09d0f501f6ea1f315673ff81ec6ab824e1b14ebe4714d0a041525aa35ed9e96f5fcde34d39002b9c25c23127a4c6a390b244dd97cb668ae72288bbfed45274d9bcb982431ae5f700d7303ea6f00c4c962a9dfab3990c96418357801cdeb8e6f5c9a7866261a8c076f801f992b9a733701dd1649421ba99c117990f1a826f9d667cb122fc59b9c75c1d5e0a01faa911b5813c4401c95e2e557def47ac0708a318ef3d7becb2e0f5e16a0ff63a05007e9e7322b24c5f0359e22b4e4bcf2d99c286340dce488665a620f7897f5ee7e6fb002e86e68c0a5de6c9ff799a2427c78e41632afc7f79a199256aaf2c00eb3e0063fc01fda3e1be0e3fb3d814f0a150f3877fbcb990cf27c3c5cc6037ac5887d1144de4d30026b3e9f20d98eadc1687d5e2b054e7447ba7f24193a68d1d7950ae0e2ea443f7fe01ff92580d8a2f251909e1cc70bc54da0fcb37962b04d7e7c101a0e4f365b1921a26",
+      left_right_intersection: 240,
+      intersecting_level: 238,
+    }
+
+  trace cbor.diagnostic(
+    builtin.length_of_bytearray(builtin.serialise_data(proof_block)),
+  )
+
+  let actual_root = add_member(member, data_serializer, proof_block, old_root)
+
+  expected_root == actual_root
+}
+
+test sparse_merkle_proof_bitcoin800k() {
+  let old_root =
+    #"b2d007b9cfac394c5342c5420652feb57c2c3fe210f2fa04b673a4b785fa709a"
+
+  let expected_root =
+    #"15c707d0d011b484fee270ccada780c37cb6d213dd96e9e5474dc8a4ecd6043a"
+
+  // #"4d944fbecf9ebed7bbb96a60f26a6e4f12cde5f699b160bd8bacf7c5b3f4a4f3"
+  let member =
+    #"00000000000000000004a8437dbe7995eacf42daa014088d04e5010a44e64f42"
+
+  let data_serializer = identity
+
+  let proof_block =
+    MerkleProofBlock {
+      left_leaf: #"4d944b2d33ac3242a864bbfc70eab8a8c1531cb0cff26d02398f26ca95132b6a",
+      right_leaf: #"4d9453605d145d468b35527442eaca3407702da892361cc383fdc65807b3c921",
+      left_proofs: #"be6958d13960863e9d34f789453f13e8f999aae3077f8bd221eb443900f50656e8",
+      right_proofs: #"ea6f09f86ac9464567a82521a4d117d78f2f30f1f13d213039b3c34ad1063a3c33",
+      continuing_side_proofs: #"4b795c9b28cdc81d3d80e2c998628b0d2ebb7ca90bac8858e953540b1dbe418aeb",
+      remaining_proofs: #"01ed29af690b2be479e6885fcce649a53f4d7248080efdce0d9b25f39f82fb2d48b300f8cee02011790b5e460ec687ded4a9157b924cb06b42bc32a092bac87a9fc557ee01ef8c5ff1208dcc7a67cc3aa50fd00338596651be92c53cb737c3674bd485547bdf01f0e91367c327c548a186d3d94b932c23dd0a0c0ac27e427f9c1b8c9a3150ca285801f1fff7ee68e975d077eae8d2afde82bafad93d635fd3ea51cc2489a13b711d42ab00ed2390a084352758723d15a4a2d17fea55ea6de611211c806f94d334397769fbf201f37daa5b1a475e4778a6ffef1b400c452e6bc39cf8b5b8564149180d752f7443140066ac374ccc44a6eaf5e96be71133fece7ef6285ca2c028fb2569d3d8852a720ef401f5fc6e932402c18ea51231de55ebf8310e0604be8f7944499a1d9890bf1e40cc7001f69d0a161e22c7de97f93ed5e95c876ddeba207ea726a3e3f80fd2cc3ffc1ad8a400637083cbcdd017838c67e51095e0e57eb10d56b180c21eb6c18bbb9bc6e7420ff70086237bc0917775530d179e2cfca093159e48bf9ab055d19f7f4e837d9ed8dfd3f801f97e2d5ae9f52508c861a45394dd4c9e7e6cc3819d1e1d112405f5f52dbc4c00fc00a72dfe78d77d05310f6650aa3c0a8da9ff1051af33e4a01c0f6b9e27f1cc954efa008216de938a3846be972a9637bc437f4277d7300d2479d5702f1dd2e3ae464c3ffb01fcabf3db6deb2a007ad43ed7f58507fec40480928b5e305182660946d008ada24201fd1bc9696bee26ea5054fd7549203d77cd2a96768f1c22e8c3b5a555cd4f2aef6000f793c95b8a059e5c8b4e076601d4a61583fbc1a1b6944e86e13f524addad02e7fe01ffd45f5018aa3c6c2f5277146d87ce8827e44a4cfdaf888e79e1353c411adb00c0",
+      left_right_intersection: 236,
+      intersecting_level: 234,
+    }
+
+  trace cbor.diagnostic(
+    builtin.length_of_bytearray(builtin.serialise_data(proof_block)),
+  )
+
+  let actual_root = add_member(member, data_serializer, proof_block, old_root)
+
+  expected_root == actual_root
+}

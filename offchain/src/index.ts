@@ -83,6 +83,61 @@ class MerkleProof {
     };
     return JSON.stringify(x);
   }
+
+  toStringProof() {
+    const x = {
+      startingSide: this.startingSide,
+      leftLeaf: this.leftLeaf
+        ? Buffer.from(this.leftLeaf).toString("hex")
+        : undefined,
+      rightLeaf: this.rightLeaf
+        ? Buffer.from(this.rightLeaf).toString("hex")
+        : undefined,
+      leftProofs: this.leftProofs
+        .map((x) => {
+          let l = new Uint8Array([x[1]]);
+
+          return Buffer.concat([x[0], l]).toString("hex");
+        })
+        .join(""),
+
+      rightProofs: this.rightProofs
+        .map((x) => {
+          let l = new Uint8Array([x[1]]);
+
+          return Buffer.concat([l, x[0]]).toString("hex");
+        })
+        .join(""),
+      continuingSideProofs: this.continuingSideProofs
+        .map((x) => {
+          let l = new Uint8Array([x[1]]);
+
+          if (this.startingSide === "left") {
+            return Buffer.concat([x[0], l]).toString("hex");
+          } else {
+            return Buffer.concat([l, x[0]]).toString("hex");
+          }
+        })
+        .join(""),
+      remainingProofs: this.remainingProofs
+        .map((x) => {
+          let l = new Uint8Array([x[1]]);
+          if (x[2] === "left") {
+            return Buffer.concat([new Uint8Array([0]), x[0], l]).toString(
+              "hex"
+            );
+          } else {
+            return Buffer.concat([new Uint8Array([1]), l, x[0]]).toString(
+              "hex"
+            );
+          }
+        })
+        .join(""),
+      leftRightHeight: this.leftRightHeight,
+      intersectingHeight: this.intersectingHeight,
+    };
+    return JSON.stringify(x);
+  }
 }
 
 export class Leaf {
@@ -123,6 +178,11 @@ export class Leaf {
     }
 
     if (testBit < 0) {
+      const bufferValue: Uint8Array =
+        typeof value == "string"
+          ? new TextEncoder().encode(value)
+          : new Uint8Array(value);
+      console.log(blake2bHex(bufferValue, undefined, 32));
       throw new Error("Key already exists");
     }
 
