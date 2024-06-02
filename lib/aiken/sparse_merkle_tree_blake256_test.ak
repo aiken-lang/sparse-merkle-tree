@@ -877,3 +877,37 @@ test sparse_merkle_proof_bitcoin800k() {
 
   expected_root == actual_root
 }
+
+test sparse_merkle_proof_bitcoin_insert_845602() {
+  let old_root =
+    #"3186298f70843af364b500f8deae2668f1cfde4486a88621483747ff50abafd8"
+
+  let expected_root =
+    #"988a911cc1e86e8acc4749751610de917e1d78b480b1d4ed66e4cd784da488f9"
+
+  // #"9de8e27947998a39e8a9916c4b243033b148ef174b7dfba96bb6abc14a6216b6"
+  let member =
+    #"00000000000000000002a6296e48c3f8d78afeb83b5c59b7474331611f03b15c"
+
+  let data_serializer = identity
+
+  let proof_block =
+    MerkleProofBlock {
+      left_leaf: #"9de8dd04689ce59d954595d86789b424c5276c3f88710427c4deaaef02a564c9",
+      right_leaf: #"9de8ea418dcdc471613653e847b4c9bc91bb04861dd8b42e8ed78a9a5895a4a8",
+      left_proofs: #"832073d925e2d74575ceb0a4e3b3368fadac52aea9dab2dfe396444092efee5deb2ac110741baa6c853545053abb0161afadb338c9dbc218fa89f32b615944f1cdec",
+      right_proofs: #"",
+      continuing_side_proofs: #"",
+      remaining_proofs: #"00b33253fcc197883381f4cbf57ca51e5ec85cfd6df8c21d01a2147c97f218164cee00009ff90681503aeb067d11680714ee13181e29fb42418b75ce312e70648b9ed4ef01f0bcb80b73afe4d7d8aca8c12888d658bae91b24caaa87e1ec77e23804bbb027d701f1f59fa42b82a84fcd7e82dbe9b46bcbce69aa326f87f21ab720ee29544dbc411801f29cbf1014b85b0063c5e8dd299ec6f8d202ff39ee44e1ef13ec71e9f0af09fd590024183f5701e383886c25a1b4830f65930cc17313efc5e9c2fd4fa4bb0abfb681f301f48587a5acc0dd399fabeea9033395d28782846748469634e39bd0647a8f33114e0074215436bd52a84e24c78eee556112553b72f55a0b084423c8799416b63018cff50036f6f6f8462d0eb24b4d8fe8ef65faab156287f457320167fb1db6c98c0b123bf60061cdfbb682d031f7137bb9831a86b5edb54c073cc1481f8063e2e13ec9798590f700cd7a3d119e3192506a0e02affb0888351515bfcb1b18bef7d9fe730f854748edf801f9b64714a09fb90d31fecfc385f4b2d9f2b91375a6aa1d70583e5730a36a1cc858003f813f4afb23ffab0313b836924a89e11a4570876aa4229f2b3ecf71584facbffa00aaf3242e096b84001d806d9df13b8d2850d8b59a30023c07b6dc034cb259e09cfb009eeef8241512939c2d25712e122300c978cb6d40041464b1f3b65696f43172d4fc01fd3a1d1b5419cff65d2d1ada9fff6fd91bc69ea169d469fdf31157b9d22a263b0a01fe341f58e1cb0a058cd5784524859661ddfc90af5db4c7867fc00625ec8961f115009776b54358d703bffaf9f6d4be3f36a28a84812622713b9230d9e071314e36f1ff",
+      left_right_intersection: 237,
+      intersecting_level: 235,
+    }
+
+  trace cbor.diagnostic(
+    builtin.length_of_bytearray(builtin.serialise_data(proof_block)),
+  )
+
+  let actual_root = add_member(member, data_serializer, proof_block, old_root)
+
+  expected_root == actual_root
+}
